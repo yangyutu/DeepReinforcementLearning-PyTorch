@@ -19,7 +19,6 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 class DQNAgent(Agent):
-    NetUpdateOption = Enum('NetUpdateOption', ('policyNet', 'targetNet', 'doubleQ'))
 
     def __init__(self, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None, **kwargs):
         super(DQNAgent, self).__init__(**kwargs)
@@ -41,6 +40,11 @@ class DQNAgent(Agent):
         # move model to correct device
         self.policyNet = self.policyNet.to(self.device)
         self.targetNet = self.targetNet.to(self.device)
+
+        self.dirName = self.config['mapName'] + '/'
+        if not os.path.exists(self.dirName):
+            os.makedirs(self.dirName)
+
 
         self.nStepBuffer = []
 
@@ -97,18 +101,13 @@ class DQNAgent(Agent):
 
         runningAvgEpisodeReward = 0.0
 
-        for epIdx in range(self.trainStep):
-            print("episode index:" + str(epIdx))
+        self.epIdx = 0
+        for self.epIdx in range(self.trainStep):
+            print("episode index:" + str(self.epIdx))
             state = self.env.reset()
             done = False
             rewardSum = 0
             stepCount = 0
-
-
-            if self.config['logFlag'] and epIdx % self.config['logFrequency'] == 0:
-                stateSet = []
-                stateSet.append(state)
-                stepLogList = []
 
             while not done:
                 self.epsThreshold = self.epsilon_by_step(self.globalStepCount)
@@ -137,42 +136,23 @@ class DQNAgent(Agent):
                     print('info')
                     print(info)
 
-                #if self.config['logFlag'] and epIdx % self.config['logFrequency'] == 0:
-                    # stateSet.append(state)
-                    # step_logs = {
-                    #     'episode': epIdx,
-                    #     'step': stepCount,
-                    #     'action': action,
-                    #     'state': state,
-                    #     'reward': reward,
-                    #     'metrics': loss,
-                    #     'info': info,
-                    # }
-                    #
-                    # stepLogList.append(step_logs)
 
                 if done:
-                    runningAvgEpisodeReward = (runningAvgEpisodeReward*epIdx + rewardSum)/(epIdx + 1)
+                    runningAvgEpisodeReward = (runningAvgEpisodeReward*self.epIdx + rewardSum)/(self.epIdx + 1)
                     print("done in step count: {}".format(stepCount))
                     print("reward sum = " + str(rewardSum))
                     print("running average episode reward sum: {}".format(runningAvgEpisodeReward))
                     print(info)
-                    self.rewards.append([epIdx, stepCount, self.globalStepCount, rewardSum])
-                    if self.config['logFlag'] and epIdx % self.config['logFrequency'] == 0:
-                        stateSet.append(state)
-                        stateSet = np.array(stateSet)
-                        #fileName = self.config['logFileName'] + str(epIdx) + '.txt'
-                        #np.savetxt(fileName, stateSet)
-                        fileNameJson = self.config['logFileName'] + str(epIdx) + '.json'
-                        dirname = os.path.dirname(fileNameJson)
-                        if not os.path.exists(dirname):
-                            os.makedirs(dirname)
-                        with open(fileNameJson, 'w') as f:
-                            json.dump(stepLogList, f, cls = NumpyEncoder)
+
+                    self.rewards.append([self.epIdx, stepCount, self.globalStepCount, rewardSum, runningAvgEpisodeReward])
+                    if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
+                        self.save_checkpoint()
                     break
 
                 stepCount += 1
                 self.globalStepCount += 1
+
+        self.save_all()
 
     def store_experience(self, state, action, nextState, reward):
         self.nStepBuffer.append((state, action, nextState, reward))
@@ -324,3 +304,24 @@ class DQNAgent(Agent):
 
     def testPolicyNet(self, episodes, memory = None):
         return self.perform_on_policy(episodes, self.getPolicy, memory)
+
+    def save_all(self):
+        prefix = self.dirName + self.config['mapName'] + 'Finalepoch' + str(self.epIdx + 1)
+        torch.save({
+            'epoch': self.epIdx + 1,
+            'model_state_dict': self.policyNet.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+        }, prefix + '_checkpoint.pt')
+
+        self.saveLosses(prefix + '_loss.txt')
+        self.saveRewards(prefix + '_reward.txt')
+
+    def save_checkpoint(self):
+        prefix = self.dirName + self.config['mapName'] + 'Epoch' + str(self.epIdx + 1)
+        self.saveLosses(prefix + '_loss.txt')
+        self.saveRewards(prefix + '_reward.txt')
+        torch.save({
+            'epoch': self.epIdx + 1,
+            'model_state_dict': self.policyNet.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+        }, prefix + '_checkpoint.pt')

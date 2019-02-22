@@ -11,7 +11,8 @@ mat = np.genfromtxt('simpleMap.txt')
 #
 #
 config = {}
-config['mazeFileName'] = 'simpleMapSmall.txt'
+config['mapName'] = 'simpleMapSmall'
+config['JumpMatrix'] = 'trajSampleHalf.npz'
 config['numCircObs'] = 2
 config['dynamicObsFlag'] = False
 config['agentReceptHalfWidth'] = 5

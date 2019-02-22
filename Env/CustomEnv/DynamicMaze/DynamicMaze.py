@@ -179,6 +179,7 @@ class StochAgent(DetermAgent):
     def __init__(self, config, mapMat, obsMap):
         super(StochAgent, self).__init__(config, mapMat, obsMap)
 
+        self.config = config
         self.nbActions = 2 # on and off
 
         self.Dr = 0.161
@@ -190,7 +191,7 @@ class StochAgent(DetermAgent):
         self.angleStd = math.sqrt(2*self.Tc*self.Dr)
         self.xyStd = math.sqrt(2 * self.Tc * self.Dt)
 
-        self.jumpMat = np.load('trajSampleHalf.npz')['jm']
+        self.jumpMat = np.load(self.config['JumpMatrix'])['jm']
         #self.jumpMat = np.genfromtxt('trajSampleAll.txt')
         self.currentState = np.array([0.0, 0.0, 0.0])
         self.constructSensorArrayIndex()
@@ -201,7 +202,7 @@ class StochAgent(DetermAgent):
     # add integer resentation of location
     #    index = self.senorIndex + self.currentState + np.array([self.padding, self.padding])
         phi = self.currentState[2]
-        phi = (self.stepCount)*math.pi/4.0
+    #   phi = (self.stepCount)*math.pi/4.0
     # this is rotation matrix transform from local coordinate system to lab coordinate system
         rotMatrx = np.matrix([[math.cos(phi),  -math.sin(phi)],
                               [math.sin(phi), math.cos(phi)]])
@@ -237,7 +238,7 @@ class StochAgent(DetermAgent):
 
 
     def constructSensorArrayIndex(self):
-        x_int = np.arange(0, 2*self.receptHalfWidth + 1)
+        x_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
         y_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
         [Y, X] = np.meshgrid(y_int, x_int)
         self.senorIndex = np.stack((X.reshape(-1), Y.reshape(-1)), axis=1)
@@ -385,7 +386,7 @@ class StochAgent(DetermAgent):
 class DynamicMaze:
     def __init__(self, config):
         self.config = config
-        self.readMaze(config['mazeFileName'])
+        self.readMaze(config['mapName'])
         if self.config['dynamicObsFlag']:
             self.generateCircleObs()
         self.initObsMat()
@@ -398,7 +399,7 @@ class DynamicMaze:
         self.stateDim = self.agent.stateDim
 
     def readMaze(self, fileName):
-        self.mapMat = np.genfromtxt(fileName)
+        self.mapMat = np.genfromtxt(fileName + '.txt')
         self.mapShape = self.mapMat.shape
         
     def step(self, action):
@@ -451,7 +452,7 @@ class DynamicMaze:
         obsMapSizeTwo = self.mapMat.shape[1] + 2*padW
         self.obsMat = np.ones((obsMapSizeOne, obsMapSizeTwo))
         self.obsMat[padW:-padW, padW:-padW] = self.mapMat
-        np.savetxt(self.config['mazeFileName'].split('.')[0]+'obsMap.txt', self.obsMat, fmt='%d', delimiter='\t')
+        np.savetxt(self.config['mapName']+'obsMap.txt', self.obsMat, fmt='%d', delimiter='\t')
 
     def updateObsMat(self):
         if self.config['dynamicObsFlag']:
