@@ -286,7 +286,7 @@ class StochAgent(DetermAgent):
         else:
             jm = np.array([0.0, 0.0, jmRaw[2]], dtype=np.float32)
             # penality to hit wall
-            reward = -1
+            reward -= 1
 
         # update current state using modified jump matrix
         self.currentState += jm
@@ -316,8 +316,16 @@ class StochAgent(DetermAgent):
         dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
         dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
 
-        if np.linalg.norm(distance, ord=np.inf) < 1.0:
-            reward = 20.0
+        normDist = np.linalg.norm(distance, ord=2)
+        done = False
+
+        # rewards for achieving smaller distance
+        if self.minDistSoFar > (normDist + 1):
+            self.minDistSoFar = normDist
+            reward += 1
+
+        if np.linalg.norm(distance, ord=np.inf) < 2.0:
+            reward += 20
             done = True
         else:
             reward = -0.1 # penality for slowness
@@ -341,6 +349,7 @@ class StochAgent(DetermAgent):
 
     def reset(self):
         self.stepCount = 0
+        self.minDistSoFar = float('inf')
         self.epiCount += 1
         # store random jump for this episode
         randomIdx = np.random.choice(self.jumpMat.shape[0], self.endStep + 10)

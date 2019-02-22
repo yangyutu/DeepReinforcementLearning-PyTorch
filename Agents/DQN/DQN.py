@@ -41,7 +41,7 @@ class DQNAgent(Agent):
         self.policyNet = self.policyNet.to(self.device)
         self.targetNet = self.targetNet.to(self.device)
 
-        self.dirName = self.config['mapName'] + '/'
+        self.dirName = self.config['mapName'] + 'Log/'
         if not os.path.exists(self.dirName):
             os.makedirs(self.dirName)
 
@@ -109,6 +109,9 @@ class DQNAgent(Agent):
             rewardSum = 0
             stepCount = 0
 
+            # clear the nstep buffer
+            self.nStepBuffer.clear()
+
             while not done:
                 self.epsThreshold = self.epsilon_by_step(self.globalStepCount)
 
@@ -143,6 +146,8 @@ class DQNAgent(Agent):
                     print("reward sum = " + str(rewardSum))
                     print("running average episode reward sum: {}".format(runningAvgEpisodeReward))
                     print(info)
+
+
 
                     self.rewards.append([self.epIdx, stepCount, self.globalStepCount, rewardSum, runningAvgEpisodeReward])
                     if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
@@ -195,7 +200,7 @@ class DQNAgent(Agent):
                 transitions_raw= self.memory.sample(self.trainBatchSize)
 
             loss = self.update_net_on_transitions(transitions_raw, self.netLossFunc, 1, updateOption=self.netUpdateOption, netGradClip=self.netGradClip, info=info)
-            self.losses.append([self.globalStepCount, loss])
+            self.losses.append([self.globalStepCount, self.epIdx, loss])
 
             if self.learnStepCounter % self.targetNetUpdateStep == 0:
                 self.targetNet.load_state_dict(self.policyNet.state_dict())

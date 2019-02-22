@@ -67,8 +67,9 @@ def plotPolicy(policy, nbActions):
 config = dict()
 
 mapName = 'singleObstacle'
-
+config['mapName'] = mapName
 config['trainStep'] = 6000
+config['JumpMatrix'] = 'trajSampleHalf.npz'
 config['epsThreshold'] = 0.1
 config['epsilon_start'] = 0.3
 config['epsilon_final'] = 0.05
@@ -135,7 +136,7 @@ targetNet = deepcopy(policyNet)
 optimizer = optim.Adam(policyNet.parameters(), lr=config['learningRate'])
 
 
-agent = DQNAgent(policyNet, targetNet, env, optimizer, torch.nn.MSELoss(), N_A,
+agent = DQNAgent(policyNet, targetNet, env, optimizer, torch.nn.MSELoss(reduction='none'), N_A,
                  stateProcessor=stateProcessor, config=config)
 
 
@@ -167,7 +168,7 @@ if trainFlag:
                           dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
                           state = {'sensor': sensorInfo, 'target': np.array([dx, dy])}
                           policy[i, j] = agent.getPolicy(state)
-            np.savetxt('DynamicMazePolicyBeforeTrain' + mapName +'phiIdx'+ str(phiIdx) + '.txt', policy, fmt='%d', delimiter='\t')
+            np.savetxt('DynamicMazePolicyBeforeTrain' + config['mapName'] +'phiIdx'+ str(phiIdx) + '.txt', policy, fmt='%d', delimiter='\t')
     #
     # plotPolicy(policy, N_A)
 
@@ -191,7 +192,7 @@ if trainFlag:
                         dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
                         state = {'sensor': sensorInfo, 'target': np.array([dx, dy])}
                         policy[i, j] = agent.getPolicy(state)
-            np.savetxt('DynamicMazePolicyAfterTrain' + mapName + 'phiIdx' + str(phiIdx) + '.txt', policy, fmt='%d',
+            np.savetxt('DynamicMazePolicyAfterTrain' + config['mapName'] + 'phiIdx' + str(phiIdx) + '.txt', policy, fmt='%d',
                        delimiter='\t')
 
     torch.save({
@@ -210,6 +211,6 @@ if testFlag:
 
     recorder = TrajRecorder()
     agent.testPolicyNet(100, recorder)
-    recorder.write_to_file(mapName + 'TestTraj.txt')
+    recorder.write_to_file(config['mapName'] + 'TestTraj.txt')
 
 #plotPolicy(policy, N_A)
