@@ -12,7 +12,7 @@ import math
 import matplotlib.pyplot as plt
 import ghalton
 import random
-
+from copy import deepcopy
 #
 
 np.random.seed(1)
@@ -286,7 +286,7 @@ class StochAgent(DetermAgent):
         else:
             jm = np.array([0.0, 0.0, jmRaw[2]], dtype=np.float32)
             # penality to hit wall
-            reward -= 1
+            reward -= 5
 
         # update current state using modified jump matrix
         self.currentState += jm
@@ -328,7 +328,7 @@ class StochAgent(DetermAgent):
             reward += 20
             done = True
         else:
-            reward = -0.1 # penality for slowness
+            reward -= 0.1 # penality for slowness
             done = False
 
         if self.stepCount > self.endStep:
@@ -391,6 +391,16 @@ class StochAgent(DetermAgent):
         combinedState = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
                          'target': np.array([dx, dy])}
         return combinedState
+
+        def __deepcopy__(self, memo):
+            cls = self.__class__
+            result = cls.__new__(cls)
+            # the memo dict, where id-to-object correspondence is kept to reconstruct
+            # complex object graphs perfectly
+            memo[id(self)] = result
+            for k, v in self.__dict__.items():
+                setattr(result, k, deepcopy(v, memo))
+            return result
 
 class DynamicMaze:
     def __init__(self, config):
@@ -467,4 +477,12 @@ class DynamicMaze:
         if self.config['dynamicObsFlag']:
             raise NotImplementedError
 
-
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+#the memo dict, where id-to-object correspondence is kept to reconstruct
+#complex object graphs perfectly
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result

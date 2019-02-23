@@ -1,7 +1,7 @@
 import simplejson as json
 import numpy as np
 import math
-
+import torch
 
 class Agent(object):
     """ Abstract base class for all agent
@@ -14,7 +14,7 @@ class Agent(object):
         self.config = config
 
         self.device = 'cpu'
-        if 'device' in self.config:
+        if 'device' in self.config and torch.cuda.is_available():
             self.device = self.config['device']
 
         self.epsThreshold = self.config['epsThreshold']

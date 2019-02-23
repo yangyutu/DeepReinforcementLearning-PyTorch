@@ -39,14 +39,21 @@ class DQNAgent(Agent):
 
         # move model to correct device
         self.policyNet = self.policyNet.to(self.device)
-        self.targetNet = self.targetNet.to(self.device)
 
-        self.dirName = self.config['mapName'] + 'Log/'
+        # in case targetNet is None
+        if self.targetNet is not None:
+            self.targetNet = self.targetNet.to(self.device)
+
+        self.dirName = 'Log/'
+        if 'dataLogFolder' in self.config:
+            self.dirName = self.config['dataLogFolder']
         if not os.path.exists(self.dirName):
             os.makedirs(self.dirName)
 
 
         self.nStepBuffer = []
+
+        self.identifier = ''
 
     def read_config(self):
         self.trainStep = self.config['trainStep']
@@ -73,9 +80,13 @@ class DQNAgent(Agent):
         self.nStepForward = 1
         if 'nStepForward' in self.config:
             self.nStepForward = self.config['nStepForward']
+        self.lossRecordStep = 10
+        if 'lossRecordStep' in self.config:
+            self.lossRecordStep = self.config['lossRecordStep']
 
 
-    def select_action(self, state, epsThreshold):
+
+    def select_action(self, net, state, epsThreshold):
 
         # get a random number so that we can do epsilon exploration
         randNum = random.random()
@@ -85,17 +96,16 @@ class DQNAgent(Agent):
                 # here state[np.newaxis,:] is to add a batch dimension
                 if self.stateProcessor is not None:
                     state = self.stateProcessor([state])
-                    QValues = self.policyNet(state)
+                    QValues = net(state)
                 else:
-                    QValues = self.policyNet(torchvector(state[np.newaxis, :]).to(self.device))
+                    QValues = net(torchvector(state[np.newaxis, :]).to(self.device))
                 action = torch.argmax(QValues).item()
-
         else:
             action = random.randint(0, self.numAction-1)
         return action
 
     def getPolicy(self, state):
-        return self.select_action(state, -0.01)
+        return self.select_action(self.policyNet, state, -0.01)
 
     def train(self):
 
@@ -115,7 +125,7 @@ class DQNAgent(Agent):
             while not done:
                 self.epsThreshold = self.epsilon_by_step(self.globalStepCount)
 
-                action = self.select_action(state, self.epsThreshold)
+                action = self.select_action(self.policyNet, state, self.epsThreshold)
 
                 nextState, reward, done, info = self.env.step(action)
 
@@ -200,7 +210,9 @@ class DQNAgent(Agent):
                 transitions_raw= self.memory.sample(self.trainBatchSize)
 
             loss = self.update_net_on_transitions(transitions_raw, self.netLossFunc, 1, updateOption=self.netUpdateOption, netGradClip=self.netGradClip, info=info)
-            self.losses.append([self.globalStepCount, self.epIdx, loss])
+
+            if self.globalStepCount % self.lossRecordStep == 0:
+                self.losses.append([self.globalStepCount, self.epIdx, loss])
 
             if self.learnStepCounter % self.targetNetUpdateStep == 0:
                 self.targetNet.load_state_dict(self.policyNet.state_dict())
@@ -295,7 +307,7 @@ class DQNAgent(Agent):
             rewardSum = 0
             stepCount = 0
             while not done:
-                action = self.select_action(state, -0.01)
+                action = self.select_action(self.policyNet, state, -0.01)
                 nextState, reward, done, info = self.env.step(action)
                 stepCount += 1
                 if memory is not None:
@@ -311,7 +323,7 @@ class DQNAgent(Agent):
         return self.perform_on_policy(episodes, self.getPolicy, memory)
 
     def save_all(self):
-        prefix = self.dirName + self.config['mapName'] + 'Finalepoch' + str(self.epIdx + 1)
+        prefix = self.dirName + self.config['mapName'] + self.identifier + 'Finalepoch' + str(self.epIdx + 1)
         torch.save({
             'epoch': self.epIdx + 1,
             'model_state_dict': self.policyNet.state_dict(),
@@ -322,7 +334,7 @@ class DQNAgent(Agent):
         self.saveRewards(prefix + '_reward.txt')
 
     def save_checkpoint(self):
-        prefix = self.dirName + self.config['mapName'] + 'Epoch' + str(self.epIdx + 1)
+        prefix = self.dirName + self.config['mapName']+ self.identifier + 'Epoch' + str(self.epIdx + 1)
         self.saveLosses(prefix + '_loss.txt')
         self.saveRewards(prefix + '_reward.txt')
         torch.save({

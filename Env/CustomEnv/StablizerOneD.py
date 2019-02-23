@@ -3,6 +3,7 @@
 import gym
 import numpy as np
 import random
+from copy import deepcopy
 import matplotlib.pyplot as plt
 
 class StablizerOneD(gym.Env):
@@ -60,6 +61,15 @@ class StablizerOneD(gym.Env):
     def render_traj(self, stateSet, ax):
         ax.plot(np.array(stateSet)[:])
 
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+#the memo dict, where id-to-object correspondence is kept to reconstruct
+#complex object graphs perfectly
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result
 
 
 
