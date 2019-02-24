@@ -323,7 +323,7 @@ class DQNAgent(Agent):
         return self.perform_on_policy(episodes, self.getPolicy, memory)
 
     def save_all(self):
-        prefix = self.dirName + self.config['mapName'] + self.identifier + 'Finalepoch' + str(self.epIdx + 1)
+        prefix = self.dirName + self.identifier + 'Finalepoch' + str(self.epIdx + 1)
         torch.save({
             'epoch': self.epIdx + 1,
             'model_state_dict': self.policyNet.state_dict(),
@@ -334,7 +334,7 @@ class DQNAgent(Agent):
         self.saveRewards(prefix + '_reward.txt')
 
     def save_checkpoint(self):
-        prefix = self.dirName + self.config['mapName']+ self.identifier + 'Epoch' + str(self.epIdx + 1)
+        prefix = self.dirName + self.identifier + 'Epoch' + str(self.epIdx + 1)
         self.saveLosses(prefix + '_loss.txt')
         self.saveRewards(prefix + '_reward.txt')
         torch.save({
