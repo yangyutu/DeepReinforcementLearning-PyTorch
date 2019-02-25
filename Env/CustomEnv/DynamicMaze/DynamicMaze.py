@@ -156,7 +156,7 @@ class DetermAgent:
             if self.mapMat[row, col] == 0:
                 break
         self.currentState = np.array([row, col], dtype=np.int32)
-        self.targetState = np.array(self.config['targetState'])
+        self.targetState = np.array(self.config['targetState'], dtype=np.int32)
 
         if self.config['dynamicTargetFlag']:
             while True:
@@ -196,6 +196,26 @@ class StochAgent(DetermAgent):
         self.currentState = np.array([0.0, 0.0, 0.0])
         self.constructSensorArrayIndex()
         self.epiCount = -1
+
+        # generate a target-particle contraint
+
+        self.startThresh = 1
+        self.endThresh = 1
+        self.distanceThreshDecay = 10000
+
+        if 'target_start_thresh' in self.config:
+            self.startThresh = self.config['target_start_thresh']
+        if 'target_end_thresh' in self.config:
+            self.endThresh = self.config['target_end_thresh']
+        if 'distance_thresh_decay' in self.config:
+            self.distanceThreshDecay = self.config['distance_thresh_decay']
+
+        self.thresh_by_episode = lambda step: self.endThresh + (
+                self.startThresh - self.endThresh) * math.exp(-1. * step / self.distanceThreshDecay)
+
+        self.config['targetThreshFlag'] = False
+        if 'targetThreshFlag' in self.config:
+            self.targetThreshFlag = self.config['targetThreshFlag']
 
     def getSensorInfo(self):
     # sensor information needs to consider orientation information
@@ -253,7 +273,6 @@ class StochAgent(DetermAgent):
 
 
     def step(self, action):
-
 
         reward = 0.0
         if action == 1:
@@ -347,15 +366,7 @@ class StochAgent(DetermAgent):
                          'target': np.array([dx, dy])}
         return combinedState, reward, done, info
 
-    def reset(self):
-        self.stepCount = 0
-        self.minDistSoFar = float('inf')
-        self.epiCount += 1
-        # store random jump for this episode
-        randomIdx = np.random.choice(self.jumpMat.shape[0], self.endStep + 10)
-        self.jumpMatEpisode = self.jumpMat[randomIdx, :]
-
-        self.currentState = np.array(self.config['currentState'])
+    def reset_helper(self):
 
         if self.config['dynamicInitialStateFlag']:
             while True:
@@ -364,20 +375,36 @@ class StochAgent(DetermAgent):
                 row = index // self.mapMat.shape[1]
                 if self.mapMat[row, col] == 0:
                     break
-
             # set initial state
             self.currentState = np.array([row, col, random.random()*2*math.pi], dtype=np.float32)
 
-        self.targetState = np.array(self.config['targetState'])
+        targetThresh = float('inf')
+        if self.targetThreshFlag:
+            targetThresh = self.thresh_by_episode(self.epiCount) * max(self.mapMat.shape)
+
         # set target information
         if self.config['dynamicTargetFlag']:
             while True:
                 index = random.randint(0, self.mapMat.size - 1)
                 col = index % self.mapMat.shape[1]
                 row = index // self.mapMat.shape[1]
-                if self.mapMat[row, col] == 0:
+                distanctVec = np.array([row, col], dtype=np.float32) - self.currentState[0:2]
+                distance = np.linalg.norm(distanctVec, ord=np.inf)
+                if self.mapMat[row, col] == 0 and distance < targetThresh:
                     break
             self.targetState = np.array([row, col], dtype=np.int32)
+
+    def reset(self):
+        self.stepCount = 0
+        self.minDistSoFar = float('inf')
+        self.epiCount += 1
+        # store random jump for this episode
+        randomIdx = np.random.choice(self.jumpMat.shape[0], self.endStep + 10)
+        self.jumpMatEpisode = self.jumpMat[randomIdx, :]
+
+        self.currentState = np.array(self.config['currentState'], dtype=np.float32)
+        self.targetState = np.array(self.config['targetState'], dtype=np.int32)
+        self.reset_helper()
 
         # update sensor information
         self.getSensorInfo()
@@ -392,15 +419,15 @@ class StochAgent(DetermAgent):
                          'target': np.array([dx, dy])}
         return combinedState
 
-        def __deepcopy__(self, memo):
-            cls = self.__class__
-            result = cls.__new__(cls)
-            # the memo dict, where id-to-object correspondence is kept to reconstruct
-            # complex object graphs perfectly
-            memo[id(self)] = result
-            for k, v in self.__dict__.items():
-                setattr(result, k, deepcopy(v, memo))
-            return result
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        # the memo dict, where id-to-object correspondence is kept to reconstruct
+        # complex object graphs perfectly
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result
 
 class DynamicMaze:
     def __init__(self, config):
