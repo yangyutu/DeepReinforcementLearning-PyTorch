@@ -189,7 +189,7 @@ class StochAgent(DetermAgent):
         self.Tc = 0.1 * self.tau # Tc is control interval
         self.v = 2 * self.a / self.Tc
         self.angleStd = math.sqrt(2*self.Tc*self.Dr)
-        self.xyStd = math.sqrt(2 * self.Tc * self.Dt)
+        self.xyStd = math.sqrt(2 * self.Tc * self.Dt) / self.a
 
         self.jumpMat = np.load(self.config['JumpMatrix'])['jm']
         #self.jumpMat = np.genfromtxt('trajSampleAll.txt')
@@ -216,6 +216,22 @@ class StochAgent(DetermAgent):
         self.config['targetThreshFlag'] = False
         if 'targetThreshFlag' in self.config:
             self.targetThreshFlag = self.config['targetThreshFlag']
+
+        self.scaleFactor = 1.0
+        if 'scaleFactor' in self.config:
+            self.scaleFactor = self.config['scaleFactor']
+
+        self.targetClipLength = 2*self.receptHalfWidth
+        self.targetClipMap = lambda x: min(x, self.targetClipLength)
+
+        self.stochMoveFlag = False
+        if 'stochMoveFlag' in self.config:
+            self.stochMoveFlag = self.config['stochMoveFlag']
+
+        self.randomSeed = 1
+        if 'randomSeed' in self.config:
+            self.randomSeed = self.config['randomSeed']
+        np.random.seed(self.randomSeed)
 
     def getSensorInfo(self):
     # sensor information needs to consider orientation information
@@ -284,14 +300,19 @@ class StochAgent(DetermAgent):
                 jmRaw[2] = -jmRaw[2]
 
             # enforce deterministic
-            jmRaw[0] = 2.0
-            jmRaw[1] = 0.0
+            if not self.stochMoveFlag:
+                jmRaw[0] = 2.0
+                jmRaw[1] = 0.0
 
         if action == 0:
             jmRaw = np.array([random.gauss(0, self.xyStd),
                               random.gauss(0, self.xyStd),
                               random.gauss(0, self.angleStd)],dtype=np.float32)
 
+            # enforce deterministic
+            if not self.stochMoveFlag:
+                jmRaw[0] = 0.0
+                jmRaw[1] = 0.0
         # converting from local to lab coordinate movement
         phi = self.currentState[2]
         dx = jmRaw[0]*math.cos(phi) - jmRaw[1]*math.sin(phi)
@@ -307,14 +328,16 @@ class StochAgent(DetermAgent):
             # penality to hit wall
             reward -= 5
 
+        #print(action)
+        #print(jm)
         # update current state using modified jump matrix
         self.currentState += jm
         # make sure orientation within 0 to 2pi
         self.currentState[2] = (self.currentState[2] + 2 * np.pi) % (2 * np.pi)
 
-        if action == 0:
+        #if action == 0:
             # angle phi will update randomly
-            self.currentState[2] += random.gauss(0, self.angleStd)
+        #    self.currentState[2] += random.gauss(0, self.angleStd)
 
         if self.config['dynamicTargetFlag'] and self.stepCount % self.config['targetMoveFreq'] == 0:
             move = random.randint(0, 3)
@@ -330,10 +353,6 @@ class StochAgent(DetermAgent):
                 self.targetState[1] += 1
 
         distance = self.targetState - self.currentState[0:2]
-        # distance will be changed from lab coordinate to local coordinate
-        phi = self.currentState[2]
-        dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
-        dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
 
         normDist = np.linalg.norm(distance, ord=2)
         done = False
@@ -359,11 +378,18 @@ class StochAgent(DetermAgent):
         # update step count
         self.stepCount += 1
 
-        #angleDistance = math.atan2(distance[1], distance[0]) - self.currentState[2]
+        # distance will be changed from lab coordinate to local coordinate
+        phi = self.currentState[2]
+        dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
+        dy = - distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
+
+        dx = self.targetClipMap(dx) if dx > 0 else -self.targetClipMap(-dx)
+        dy = self.targetClipMap(dy) if dy > 0 else -self.targetClipMap(-dy)
+
         info = {'currentState': np.array(self.currentState),
                 'targetState': np.array(self.targetState)}
         combinedState = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                         'target': np.array([dx, dy])}
+                         'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor])}
         return combinedState, reward, done, info
 
     def reset_helper(self):
@@ -412,11 +438,15 @@ class StochAgent(DetermAgent):
         # distance will be change to local coordinate
         phi = self.currentState[2]
         dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
-        dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
+        dy = - distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
+
+        dx = self.targetClipMap(dx) if dx > 0 else -self.targetClipMap(-dx)
+        dy = self.targetClipMap(dy) if dy > 0 else -self.targetClipMap(-dy)
+
 
         #angleDistance = math.atan2(distance[1], distance[0]) - self.currentState[2]
         combinedState = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                         'target': np.array([dx, dy])}
+                         'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor])}
         return combinedState
 
     def __deepcopy__(self, memo):

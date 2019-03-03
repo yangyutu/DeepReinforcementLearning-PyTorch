@@ -11,6 +11,7 @@ from enum import Enum
 import simplejson as json
 import os
 import math
+import pickle
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -54,6 +55,7 @@ class DQNAgent(Agent):
         self.nStepBuffer = []
 
         self.identifier = ''
+        self.epIdx = 0
 
     def read_config(self):
         self.trainStep = self.config['trainStep']
@@ -110,9 +112,11 @@ class DQNAgent(Agent):
     def train(self):
 
         runningAvgEpisodeReward = 0.0
+        if len(self.rewards) > 0:
+            runningAvgEpisodeReward = self.rewards[-1][-1]
 
-        self.epIdx = 0
-        for self.epIdx in range(self.trainStep):
+        for trainStepCount in range(self.trainStep):
+
             print("episode index:" + str(self.epIdx))
             state = self.env.reset()
             done = False
@@ -157,8 +161,6 @@ class DQNAgent(Agent):
                     print("running average episode reward sum: {}".format(runningAvgEpisodeReward))
                     print(info)
 
-
-
                     self.rewards.append([self.epIdx, stepCount, self.globalStepCount, rewardSum, runningAvgEpisodeReward])
                     if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
                         self.save_checkpoint()
@@ -166,7 +168,7 @@ class DQNAgent(Agent):
 
                 stepCount += 1
                 self.globalStepCount += 1
-
+            self.epIdx += 1
         self.save_all()
 
     def store_experience(self, state, action, nextState, reward):
@@ -323,22 +325,41 @@ class DQNAgent(Agent):
         return self.perform_on_policy(episodes, self.getPolicy, memory)
 
     def save_all(self):
-        prefix = self.dirName + self.identifier + 'Finalepoch' + str(self.epIdx + 1)
+        prefix = self.dirName + self.identifier + 'Finalepoch' + str(self.epIdx)
         torch.save({
-            'epoch': self.epIdx + 1,
+            'epoch': self.epIdx,
+            'globalStep': self.globalStepCount,
             'model_state_dict': self.policyNet.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
         }, prefix + '_checkpoint.pt')
-
+        with open(prefix + '_memory.pickle', 'wb') as file:
+            pickle.dump(self.memory, file)
         self.saveLosses(prefix + '_loss.txt')
         self.saveRewards(prefix + '_reward.txt')
 
     def save_checkpoint(self):
-        prefix = self.dirName + self.identifier + 'Epoch' + str(self.epIdx + 1)
+        prefix = self.dirName + self.identifier + 'Epoch' + str(self.epIdx)
         self.saveLosses(prefix + '_loss.txt')
         self.saveRewards(prefix + '_reward.txt')
+        with open(prefix + '_memory.pickle', 'wb') as file:
+            pickle.dump(self.memory, file)
+
         torch.save({
-            'epoch': self.epIdx + 1,
+            'epoch': self.epIdx,
+            'globalStep': self.globalStepCount,
             'model_state_dict': self.policyNet.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
         }, prefix + '_checkpoint.pt')
+
+    def load_checkpoint(self, prefix):
+        self.loadLosses(prefix + '_loss.txt')
+        self.loadRewards(prefix + '_reward.txt')
+        with open(prefix + '_memory.pickle', 'rb') as file:
+            self.memory = pickle.load(file)
+
+        checkpoint = torch.load(prefix + '_checkpoint.pt')
+        self.epIdx = checkpoint['epoch']
+        self.globalStepCount = checkpoint['globalStep']
+        self.policyNet.load_state_dict(checkpoint['model_state_dict'])
+        self.targetNet.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])

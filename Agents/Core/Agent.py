@@ -56,6 +56,9 @@ class Agent(object):
     def saveRewards(self, fileName):
         np.savetxt(fileName, np.array(self.rewards), fmt='%.5f', delimiter='\t')
 
-
+    def loadLosses(self, fileName):
+        self.losses = np.genfromtxt(fileName).tolist()
+    def loadRewards(self, fileName):
+        self.rewards = np.genfromtxt(fileName).tolist()
 
 
