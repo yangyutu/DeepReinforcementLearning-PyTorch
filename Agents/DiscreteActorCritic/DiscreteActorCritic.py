@@ -16,7 +16,7 @@ STEP = 2000
 SAMPLE_NUMS = 30
 
 # source code from https://github.com/floodsung/a2c_cartpole_pytorch/blob/master/a2c_cartpole.py
-
+torch.manual_seed(10)
 class ActorNetwork(nn.Module):
 
     def __init__(self,input_size,hidden_size,action_size):

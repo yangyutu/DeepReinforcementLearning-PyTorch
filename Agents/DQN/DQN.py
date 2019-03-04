@@ -311,7 +311,7 @@ class DQNAgent(Agent):
             while not done:
                 action = self.select_action(self.policyNet, state, -0.01)
                 nextState, reward, done, info = self.env.step(action)
-                stepCount += 1
+
                 if memory is not None:
                     memory.push(epIdx, stepCount, state, action, nextState, reward, info)
                 state = nextState
@@ -319,6 +319,7 @@ class DQNAgent(Agent):
                 if done:
                     print("done in step count: {}".format(stepCount))
                     break
+                stepCount += 1
             print("reward sum = " + str(rewardSum))
 
     def testPolicyNet(self, episodes, memory = None):

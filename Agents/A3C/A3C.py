@@ -14,16 +14,23 @@ import math
 import torch.multiprocessing as mp
 from torch.multiprocessing import current_process
 from setproctitle import setproctitle as ptitle
+import torch.nn.functional as F
 
 
-
-
+def ensure_shared_grads(model, shared_model, gpu=False):
+    for param, shared_param in zip(model.parameters(),
+                                   shared_model.parameters()):
+        if shared_param.grad is not None and not gpu:
+            return
+        elif not gpu:
+            shared_param._grad = param.grad
+        else:
+            shared_param._grad = param.grad.cpu()
 
 class A3CWorker(mp.Process):
     def __init__(self, rank, config, localNet, env, globalNet, globalOptimizer, netLossFunc, nbAction, name,
                  globalEpisodeCount, globalEpisodeReward, globalRunningAvgReward, resultQueue, logFolder,
                 stateProcessor = None):
-        super(DQNA3CWorkerV2, self).__init__()
         self.config = config
         self.globalNet = globalNet
         self.identifier = name
@@ -48,76 +55,105 @@ class A3CWorker(mp.Process):
         if 'netGradClip' in self.config:
             self.netGradClip = self.config['netGradClip']
 
+        self.randomSeed = 1
+        if 'randomSeed' in self.config:
+            self.randomSeed = self.config['randomSeed']
+
+        # assign GPU id
         self.rank = rank
+        self.gpuIDs = config['gpuIDs']
+        self.gpuId = self.gpuIDs[self.rank % len(self.gpuIDs)]
+        if self.gpuId >= 0:
+            torch.cuda.manual_seed(self.config['randomSeed'] + rank)
+            # if gpu is available, then put local net on the GPU
+            with torch.cuda.device(self.gpuId):
+                self.localNet = self.localNet.cuda()
 
-
-    def select_action(self, net, state, epsThreshold):
-
-        # get a random number so that we can do epsilon exploration
-        randNum = random.random()
-        if randNum > epsThreshold:
-            with torch.no_grad():
-                # self.policyNet(torch.from_numpy(state.astype(np.float32)).unsqueeze(0))
-                # here state[np.newaxis,:] is to add a batch dimension
-                if self.stateProcessor is not None:
-                    state = self.stateProcessor([state])
-                    QValues = net(state)
-                else:
-                    QValues = net(torchvector(state[np.newaxis, :]).to(self.device))
-                action = torch.argmax(QValues).item()
+    def processState(self, state):
+        # change state to the right format and move it the right device
+        if self.stateProcessor is not None:
+            state = self.stateProcessor([state])
         else:
-            action = random.randint(0, self.numAction-1)
-        return action
+            state(torchvector(state[np.newaxis, :]))
+
+        if self.gpuId >= 0:
+            with torch.cuda.device(self.gpu_id):
+                state = state.cuda()
+        return state
 
     def run(self):
 
         ptitle('Training Agent: {}').format(self.rank)
-        self.gpu_id = self.gpu_ids[self.rank % len(self.gpu_ids)]
-
-
-        bufferState, bufferAction, bufferReward, bufferNextState = [], [], [], []
+        # env is running on CPU
+        bufferReward, bufferLogProbs, bufferEntropies = [], [], []
+        done = True
         for self.epIdx in range(self.trainStep):
 
             print("episode index:" + str(self.epIdx) + " from" + current_process().name + "\n")
-            state = self.env.reset()
-            done = False
+            if done:
+                state = self.env.reset()
+                state = self.processState(state)
+                done = False
+
             rewardSum = 0
             stepCount = 0
 
-            while not done:
+            while not done and stepCount < self.numSteps:
+                # the calculation is on GPU is available
+                value, logit = self.localNet(state)
+                prob = F.softmat(logit, dim = 1)
+                logProb = F.log_softmax(logit, dim = 1)
+                entropy = -(logProb * prob).sum(1)
 
-                episode = 0.1
-                action = self.select_action(self.localNet, state, episode)
-                nextState, reward, done, info = self.env.step(action)
+                action = prob.multinomial(1).data
+                logProb = logProb.gather(1, action)
 
-                bufferAction.append(action)
-                bufferState.append(state)
+                nextState, reward, done, info = self.env.step(action.cpu().item())
+                state = self.processState(nextState)
+
                 bufferReward.append(reward)
-                bufferNextState.append(nextState)
-
-                state = nextState
+                bufferLogProbs.append(logProb)
                 rewardSum += reward
 
+            # if done or stepCount == self.numSteps, we will update the net
+            R = torch.zeros(1, 1, requires_grad=True)
 
+            value, _ = self.localNet(state)
+            R.data = value.data
 
-                if self.totalStep % self.updateGlobalFrequency == 0:  # update global and assign to local net
-                    # sync
-                    self.update_net_and_sync(bufferAction, bufferState, bufferReward, bufferNextState)
-                    bufferAction.clear()
-                    bufferState.clear()
-                    bufferReward.clear()
-                    bufferNextState.clear()
+            if self.gpuId >= 0:
+                R = R.cuda()
 
-                if done:
-#                    print("done in step count: {}".format(stepCount))
-#                    print("reward sum = " + str(rewardSum))
-                # done and print information
-                #    pass
-                    self.recordInfo(rewardSum, stepCount)
+            self.values.append(value)
 
-                stepCount += 1
-                self.totalStep += 1
-        #self.resultQueue.put(None)
+            policyLoss = 0.0
+            valueLoss = 0.0
+
+            GAE = torch.zeros(1, 1, requires_grad=True)
+            if self.gpuId >= 0:
+                with torch.cuda.device(self.gpuId):
+                    GAE = GAE.cuda()
+
+            for i in reversed(range(len(self.rewards))):
+                R = self.gamma * R + self.rewards[i]
+                advantage = R - self.values[i]
+                valueLoss += 0.5 * advantage.pow(2)
+
+                # generalized advantage estimation
+                # we use values.data to ensure delta_t is a torch tenor without grad
+                delta_t = self.rewards[i] + self.gamma*self.values[i+1].data - self.values[i].data
+
+                GAE = GAE * self.gamma * self.tau + delta_t
+
+                policyLoss = policyLoss - self.logProb[i]*GAE - self.entropyPenality * self.entropies[i]
+
+            self.localNet.zero_grad()
+            (policyLoss + 0.5*valueLoss).backward()
+            ensure_shared_grads(self.localNet, self.globalNet, gpu=self.gpuId > 0)
+            self.globalOptimizer.step()
+
+            self.clearup()
+
 
     def recordInfo(self, reward, stepCount):
         with self.globalEpisodeReward.get_lock():
