@@ -24,9 +24,9 @@ class MultiLayerNetRegression(torch.nn.Module):
         out = self.predict(x)
         return out
 
-class MultiLayerNetSoftmax(torch.nn.Module):
+class MultiLayerNetLogSoftmax(torch.nn.Module):
     def __init__(self, n_feature, n_hidden, n_output):
-        super(MultiLayerNetSoftmax, self).__init__()
+        super(MultiLayerNetLogSoftmax, self).__init__()
         if len(n_hidden) < 1:
             raise ValueError("number of hidden layer should be greater than 0")
         # here we need to use nn.ModuleList in order to build a list of layers.
@@ -46,3 +46,31 @@ class MultiLayerNetSoftmax(torch.nn.Module):
         # each row will sum to 1
         out = F.log_softmax(self.predict(x), dim=1)
         return out
+
+
+
+class MultiLayerNetActorCritic(torch.nn.Module):
+    def __init__(self, n_feature, n_hidden, n_output):
+        super(MultiLayerNetActorCritic, self).__init__()
+        if len(n_hidden) < 1:
+            raise ValueError("number of hidden layer should be greater than 0")
+        # here we need to use nn.ModuleList in order to build a list of layers.
+        # we cannot use ordinary list
+        self.layers = torch.nn.ModuleList()
+        for idx, hidUnits in enumerate(n_hidden):
+            if idx == 0:
+                hidLayer = torch.nn.Linear(n_feature, n_hidden[0])
+            else:
+                hidLayer = torch.nn.Linear(n_hidden[idx-1], hidUnits)
+            self.layers.append(hidLayer)
+
+
+        self.actor = torch.nn.Linear(n_hidden[-1], n_output)
+        self.critic = torch.nn.Linear(n_hidden[-1], 1)
+    def forward(self, x):
+        for layer in self.layers:
+            x = F.relu(layer(x))
+        # each row will sum to 1
+        actorOut = F.log_softmax(self.actor(x), dim=1)
+        criticOut = self.critic(x)
+        return (actorOut, criticOut)
