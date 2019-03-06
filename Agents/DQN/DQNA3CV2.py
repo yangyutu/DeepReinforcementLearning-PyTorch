@@ -18,12 +18,13 @@ from torch.multiprocessing import current_process
 
 
 class DQNA3CWorkerV2(mp.Process):
-    def __init__(self, config, localNet, env, globalNet, globalOptimizer, netLossFunc, nbAction, rank,
+    def __init__(self, config, localNet, env, globalNets, globalOptimizer, netLossFunc, nbAction, rank,
                  globalEpisodeCount, globalEpisodeReward, globalRunningAvgReward, resultQueue, logFolder,
                 stateProcessor = None):
         super(DQNA3CWorkerV2, self).__init__()
         self.config = config
-        self.globalNet = globalNet
+        self.globalPolicyNet = globalNets[0]
+        self.globalTargetNet = globalNets[1]
         self.rank = rank
         self.globalOptimizer = globalOptimizer
         self.localNet = localNet
@@ -34,7 +35,7 @@ class DQNA3CWorkerV2(mp.Process):
         self.device = 'cpu'
         self.epIdx = 0
         self.totalStep = 0
-        self.updateGlobalFrequency = 64
+        self.updateGlobalFrequency = 10
         self.gamma = 0.99
         if 'gamma' in self.config:
             self.gamma = self.config['gamma']
@@ -58,9 +59,25 @@ class DQNA3CWorkerV2(mp.Process):
         self.nStepForward = 1
         if 'nStepForward' in self.config:
             self.nStepForward = self.config['nStepForward']
+        self.targetNetUpdateEpisode = 10
+        if 'targetNetUpdateEpisode' in self.config:
+            self.targetNetUpdateEpisode = self.config['targetNetUpdateEpisode']
 
+        self.epsThreshold = self.config['epsThreshold']
 
+        self.epsilon_start = self.epsThreshold
+        self.epsilon_final = self.epsThreshold
+        self.epsilon_decay = 1000
 
+        if 'epsilon_start' in self.config:
+            self.epsilon_start = self.config['epsilon_start']
+        if 'epsilon_final' in self.config:
+            self.epsilon_final = self.config['epsilon_final']
+        if 'epsilon_decay' in self.config:
+            self.epsilon_decay = self.config['epsilon_decay']
+
+        self.epsilon_by_episode = lambda step: self.epsilon_final + (
+                self.epsilon_start - self.epsilon_final) * math.exp(-1. * step / self.epsilon_decay)
 
     def select_action(self, net, state, epsThreshold):
 
@@ -96,7 +113,7 @@ class DQNA3CWorkerV2(mp.Process):
 
             while not done:
 
-                episode = 0.1
+                episode = self.epsilon_by_episode(self.globalEpisodeCount.value)
                 action = self.select_action(self.localNet, state, episode)
                 nextState, reward, done, info = self.env.step(action)
 
@@ -143,6 +160,8 @@ class DQNA3CWorkerV2(mp.Process):
             self.globalEpisodeCount.value += 1
             if self.config['logFlag'] and self.globalEpisodeCount.value % self.config['logFrequency'] == 0:
                 self.save_checkpoint()
+            if self.globalEpisodeCount.value % self.targetNetUpdateEpisode == 0:
+                self.globalTargetNet.load_state_dict(self.globalPolicyNet.state_dict())
 
         # resultQueue.put(globalEpisodeReward.value)
         self.resultQueue.put(
@@ -157,7 +176,7 @@ class DQNA3CWorkerV2(mp.Process):
         prefix = self.dirName + 'Epoch' + str(self.globalEpisodeCount.value)
         torch.save({
             'epoch': self.globalEpisodeCount.value + 1,
-            'model_state_dict': self.globalNet.state_dict(),
+            'model_state_dict': self.globalPolicyNet.state_dict(),
             'optimizer_state_dict': self.globalOptimizer.state_dict(),
         }, prefix + '_checkpoint.pt')
 
@@ -177,8 +196,8 @@ class DQNA3CWorkerV2(mp.Process):
         batchSize = reward.shape[0]
 
         QValues = self.localNet(state).gather(1, action)
-        # note that here use policyNet for target value
-        QNext = self.localNet(nextState).detach()
+        # note that here use targetNet for target value
+        QNext = self.globalTargetNet(nextState).detach()
         targetValues = reward + self.gamma * QNext.max(dim=1)[0].unsqueeze(-1)
 
         loss = torch.mean(self.netLossFunc(QValues, targetValues))
@@ -187,7 +206,7 @@ class DQNA3CWorkerV2(mp.Process):
 
         loss.backward()
 
-        for lp, gp in zip(self.localNet.parameters(), self.globalNet.parameters()):
+        for lp, gp in zip(self.localNet.parameters(), self.globalPolicyNet.parameters()):
              gp._grad = lp._grad
 
         if self.netGradClip is not None:
@@ -197,20 +216,20 @@ class DQNA3CWorkerV2(mp.Process):
         self.globalOptimizer.step()
         #
         # # update local net
-        self.localNet.load_state_dict(self.globalNet.state_dict())
+        self.localNet.load_state_dict(self.globalPolicyNet.state_dict())
 
 
     def test_multiProcess(self):
         print("Hello, World! from " + current_process().name + "\n")
-        print(self.globalNet.state_dict())
-        for gp in self.globalNet.parameters():
+        print(self.globalPolicyNet.state_dict())
+        for gp in self.globalPolicyNet.parameters():
             gp.grad = torch.ones_like(gp)
             #gp.grad.fill_(1)
 
         self.globalOptimizer.step()
 
         print('globalNetID:')
-        print(id(self.globalNet))
+        print(id(self.globalPolicyNet))
         print('globalOptimizer:')
         print(id(self.globalOptimizer))
         print('localNetID:')
@@ -234,10 +253,13 @@ class SharedAdam(torch.optim.Adam):
                 state['exp_avg_sq'].share_memory_()
 
 class DQNA3CMasterV2(DQNAgent):
-    def __init__(self, policyNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None, **kwargs):
-        super(DQNA3CMasterV2, self).__init__(policyNet, None, env, optimizer, netLossFunc, nbAction, stateProcessor, **kwargs)
-        self.globalNet = policyNet
-        self.globalNet.share_memory()
+    def __init__(self, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None, **kwargs):
+        super(DQNA3CMasterV2, self).__init__(policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor, **kwargs)
+        self.globalPolicyNet = policyNet
+        self.globalTargetNet = targetNet
+        self.globalPolicyNet.share_memory()
+        self.globalTargetNet.share_memory()
+
         self.numWorkers = self.config['numWorkers']
 
         self.globalEpisodeCount = mp.Value('i', 0)
@@ -251,20 +273,21 @@ class DQNA3CMasterV2(DQNAgent):
     def construct_workers(self):
         self.workers = []
         for i in range(self.numWorkers):
+            # local Net will not share memory
             localEnv = deepcopy(self.env)
-            localNet = deepcopy(self.globalNet)
-            worker = DQNA3CWorkerV2(self.config, localNet, localEnv, self.globalNet, self.optimizer, self.netLossFunc,
+            localNet = deepcopy(self.globalPolicyNet)
+            worker = DQNA3CWorkerV2(self.config, localNet, localEnv, [self.globalPolicyNet, self.globalTargetNet], self.optimizer, self.netLossFunc,
                                     self.numAction, i, self.globalEpisodeCount, self.globalEpisodeReward,
                                     self.globalRunningAvgReward, self.resultQueue, self.dirName, self.stateProcessor)
             self.workers.append(worker)
 
     def test_multiProcess(self):
 
-        for gp in self.globalNet.parameters():
+        for gp in self.globalPolicyNet.parameters():
             gp.data.fill_(0.0)
 
         print('initial global net state dict')
-        print(self.globalNet.state_dict())
+        print(self.globalPolicyNet.state_dict())
 
         processes = [mp.Process(target=w.test_multiProcess) for w in self.workers]
         for p in processes:
@@ -274,7 +297,7 @@ class DQNA3CMasterV2(DQNAgent):
             p.join()
 
         print('Final global net state dict')
-        print(self.globalNet.state_dict())
+        print(self.globalPolicyNet.state_dict())
 
     def train(self):
 

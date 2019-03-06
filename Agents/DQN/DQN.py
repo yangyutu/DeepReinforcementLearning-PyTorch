@@ -59,7 +59,10 @@ class DQNAgent(Agent):
 
     def read_config(self):
         self.trainStep = self.config['trainStep']
-        self.targetNetUpdateStep = self.config['targetNetUpdateStep']
+        self.targetNetUpdateStep = 10000
+        if 'targetNetUpdateStep' in self.config:
+            self.targetNetUpdateStep = self.config['targetNetUpdateStep']
+
         self.memoryCapacity = self.config['memoryCapacity']
         self.trainBatchSize = self.config['trainBatchSize']
         self.gamma = self.config['gamma']
