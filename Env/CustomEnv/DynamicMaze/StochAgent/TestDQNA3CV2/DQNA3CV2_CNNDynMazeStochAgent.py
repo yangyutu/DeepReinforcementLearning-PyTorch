@@ -14,6 +14,7 @@ import math
 import os
 import torch.multiprocessing as mp
 import os
+os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]=""
 # add this line to avoid cuda initilization error
@@ -25,34 +26,56 @@ import torch.nn.functional as F
 configName = 'config.json'
 with open(configName,'r') as f:
     config = json.load(f)
-    
+
+
+def weights_init(m):
+    if type(m) == nn.Conv2d:
+        weight_shape = list(m.weight.data.size())
+        fan_in = np.prod(weight_shape[1:4])
+        fan_out = np.prod(weight_shape[2:4]) * weight_shape[0]
+        w_bound = np.sqrt(6. / (fan_in + fan_out))
+        m.weight.data.uniform_(-w_bound, w_bound)
+        m.bias.data.fill_(0)
+    if type(m) == nn.Linear:
+        weight_shape = list(m.weight.data.size())
+        fan_in = weight_shape[1]
+        fan_out = weight_shape[0]
+        w_bound = np.sqrt(6. / (fan_in + fan_out))
+        m.weight.data.uniform_(-w_bound, w_bound)
+        m.bias.data.fill_(0)
+
+
 # Convolutional neural network (two convolutional layers)
+# this network use elu unit, following https://github.com/yangyutu/pytorch-a3c-1/blob/master/model.py
+# https://blog.csdn.net/mao_xiao_feng/article/details/53242235
 class MulChanConvNet(nn.Module):
     def __init__(self, inputWidth, num_hidden, num_action):
         super(MulChanConvNet, self).__init__()
-        
-        self.inputShape = (inputWidth,inputWidth)
-        self.layer1 = nn.Sequential( # input shape (1, inputWdith, inputWdith)
-            nn.Conv2d(1,             # input channel
-                      32,            # output channel
-                      kernel_size=2, # filter size
+
+        self.inputShape = (inputWidth, inputWidth)
+        self.layer1 = nn.Sequential(  # input shape (1, inputWdith, inputWdith)
+            nn.Conv2d(1,  # input channel
+                      32,  # output channel
+                      kernel_size=2,  # filter size
                       stride=1,
-                      padding=1),   # if want same width and length of this image after Conv2d, padding=(kernel_size-1)/2 if stride=1
+                      padding=1),
+            # if want same width and length of this image after Conv2d, padding=(kernel_size-1)/2 if stride=1
             nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2)) # inputWdith / 2
+            nn.MaxPool2d(kernel_size=2, stride=2))  # inputWdith / 2
 
         self.layer2 = nn.Sequential(
             nn.Conv2d(32, 64, kernel_size=2, stride=1, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2)) # inputWdith / 2
+            nn.MaxPool2d(kernel_size=2, stride=2))  # inputWdith / 2
         # add a fully connected layer
-        #width = int(inputWidth / 4) + 1
-        
+        # width = int(inputWidth / 4) + 1
+
         self.fc0 = nn.Linear(2, 32)
         self.fc1 = nn.Linear(self.featureSize() + 32, num_hidden)
         self.fc2 = nn.Linear(num_hidden, num_action)
+        self.apply(weights_init)
 
     def forward(self, state):
         x = state['sensor']
@@ -61,7 +84,7 @@ class MulChanConvNet(nn.Module):
         xout = self.layer2(xout)
         xout = xout.reshape(xout.size(0), -1)
         # mask xout for test
-        xout.fill_(0)
+        # xout.fill_(0)
         yout = F.relu(self.fc0(y))
         out = torch.cat((xout, yout), 1)
         out = F.relu(self.fc1(out))

@@ -18,13 +18,13 @@ from torch.multiprocessing import current_process
 
 
 class DQNA3CWorkerV2(mp.Process):
-    def __init__(self, config, localNet, env, globalNet, globalOptimizer, netLossFunc, nbAction, name,
+    def __init__(self, config, localNet, env, globalNet, globalOptimizer, netLossFunc, nbAction, rank,
                  globalEpisodeCount, globalEpisodeReward, globalRunningAvgReward, resultQueue, logFolder,
                 stateProcessor = None):
         super(DQNA3CWorkerV2, self).__init__()
         self.config = config
         self.globalNet = globalNet
-        self.identifier = name
+        self.rank = rank
         self.globalOptimizer = globalOptimizer
         self.localNet = localNet
         self.env = env
@@ -34,17 +34,33 @@ class DQNA3CWorkerV2(mp.Process):
         self.device = 'cpu'
         self.epIdx = 0
         self.totalStep = 0
-        self.updateGlobalFrequency = 10
+        self.updateGlobalFrequency = 64
         self.gamma = 0.99
+        if 'gamma' in self.config:
+            self.gamma = self.config['gamma']
+
         self.trainStep = self.config['trainStep']
         self.globalEpisodeCount = globalEpisodeCount
         self.globalEpisodeReward = globalEpisodeReward
         self.globalRunningAvgReward = globalRunningAvgReward
         self.resultQueue = resultQueue
         self.dirName = logFolder
+
         self.netGradClip = None
         if 'netGradClip' in self.config:
             self.netGradClip = self.config['netGradClip']
+
+        self.randomSeed = 1 + self.rank
+        if 'randomSeed' in self.config:
+            self.randomSeed = self.config['randomSeed'] + self.rank
+        torch.manual_seed(self.randomSeed)
+
+        self.nStepForward = 1
+        if 'nStepForward' in self.config:
+            self.nStepForward = self.config['nStepForward']
+
+
+
 
     def select_action(self, net, state, epsThreshold):
 
@@ -65,7 +81,7 @@ class DQNA3CWorkerV2(mp.Process):
         return action
 
     def run(self):
-
+        nStepBuffer = []
         bufferState, bufferAction, bufferReward, bufferNextState = [], [], [], []
         for self.epIdx in range(self.trainStep):
 
@@ -75,30 +91,37 @@ class DQNA3CWorkerV2(mp.Process):
             rewardSum = 0
             stepCount = 0
 
+            # clear the nstep buffer
+            nStepBuffer.clear()
+
             while not done:
 
                 episode = 0.1
                 action = self.select_action(self.localNet, state, episode)
                 nextState, reward, done, info = self.env.step(action)
 
-                bufferAction.append(action)
-                bufferState.append(state)
-                bufferReward.append(reward)
-                bufferNextState.append(nextState)
+                nStepBuffer.append((state, action, nextState, reward))
+
+                if len(nStepBuffer) > self.nStepForward:
+                    R = sum([nStepBuffer[i][3] * (self.gamma ** i) for i in range(self.nStepForward)])
+                    state, action, _, _ = nStepBuffer.pop(0)
+                    bufferAction.append(action)
+                    bufferState.append(state)
+                    bufferReward.append(R)
+                    bufferNextState.append(nextState)
 
                 state = nextState
                 rewardSum += reward
 
 
 
-                if self.totalStep % self.updateGlobalFrequency == 0:  # update global and assign to local net
+                if self.totalStep % self.updateGlobalFrequency == 0 and len(bufferAction) > 0:  # update global and assign to local net
                     # sync
                     self.update_net_and_sync(bufferAction, bufferState, bufferReward, bufferNextState)
                     bufferAction.clear()
                     bufferState.clear()
                     bufferReward.clear()
                     bufferNextState.clear()
-
                 if done:
 #                    print("done in step count: {}".format(stepCount))
 #                    print("reward sum = " + str(rewardSum))
@@ -108,7 +131,7 @@ class DQNA3CWorkerV2(mp.Process):
 
                 stepCount += 1
                 self.totalStep += 1
-        #self.resultQueue.put(None)
+        self.resultQueue.put(None)
 
     def recordInfo(self, reward, stepCount):
         with self.globalEpisodeReward.get_lock():
@@ -118,7 +141,7 @@ class DQNA3CWorkerV2(mp.Process):
                         self.globalEpisodeCount.value + 1)
         with self.globalEpisodeCount.get_lock():
             self.globalEpisodeCount.value += 1
-            if self.globalEpisodeCount.value % self.config['logFrequency'] == 0:
+            if self.config['logFlag'] and self.globalEpisodeCount.value % self.config['logFrequency'] == 0:
                 self.save_checkpoint()
 
         # resultQueue.put(globalEpisodeReward.value)
@@ -131,9 +154,7 @@ class DQNA3CWorkerV2(mp.Process):
         print("Episode Running Average Reward: ", self.globalRunningAvgReward.value)
 
     def save_checkpoint(self):
-        prefix = self.dirName + 'Epoch' + str(self.globalEpisodeCount.value + 1)
-        #self.saveLosses(prefix + '_loss.txt')
-        #self.saveRewards(prefix + '_reward.txt')
+        prefix = self.dirName + 'Epoch' + str(self.globalEpisodeCount.value)
         torch.save({
             'epoch': self.globalEpisodeCount.value + 1,
             'model_state_dict': self.globalNet.state_dict(),
@@ -177,10 +198,6 @@ class DQNA3CWorkerV2(mp.Process):
         #
         # # update local net
         self.localNet.load_state_dict(self.globalNet.state_dict())
-
-        #if self.totalStep % self.lossRecordStep == 0:
-        #    self.losses.append([self.globalStepCount, self.epIdx, loss])
-
 
 
     def test_multiProcess(self):
@@ -237,7 +254,7 @@ class DQNA3CMasterV2(DQNAgent):
             localEnv = deepcopy(self.env)
             localNet = deepcopy(self.globalNet)
             worker = DQNA3CWorkerV2(self.config, localNet, localEnv, self.globalNet, self.optimizer, self.netLossFunc,
-                                    self.numAction, 'worker'+str(i), self.globalEpisodeCount, self.globalEpisodeReward,
+                                    self.numAction, i, self.globalEpisodeCount, self.globalEpisodeReward,
                                     self.globalRunningAvgReward, self.resultQueue, self.dirName, self.stateProcessor)
             self.workers.append(worker)
 
@@ -264,19 +281,6 @@ class DQNA3CMasterV2(DQNAgent):
         for w in self.workers:
             w.start()
 
-        for w in self.workers:
-            w.join()
-
-        self.resultQueue.put(None)
-
-
-    def save_all(self):
-        prefix = self.dirName + self.identifier + 'Finalepoch' + str(self.epIdx + 1)
-        torch.save({
-            'epoch': self.globalEpisodeCount.value + 1,
-            'model_state_dict': self.policyNet.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-        }, prefix + '_checkpoint.pt')
 
         self.rewards = []  # record episode reward to plot
         while True:
@@ -285,5 +289,23 @@ class DQNA3CMasterV2(DQNAgent):
                 self.rewards.append(r)
             else:
                 break
+
+        for w in self.workers:
+            w.join()
+
+        print('all threads joined!')
+
+        self.save_all()
+
+
+    def save_all(self):
+        prefix = self.dirName + 'Finalepoch' + str(self.globalEpisodeCount.value + 1)
+        torch.save({
+            'epoch': self.globalEpisodeCount.value + 1,
+            'model_state_dict': self.policyNet.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+        }, prefix + '_checkpoint.pt')
+
+
 
         self.saveRewards(prefix + '_reward.txt')
