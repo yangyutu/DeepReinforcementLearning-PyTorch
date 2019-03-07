@@ -200,7 +200,7 @@ class DQNA3CWorkerV2(mp.Process):
         QNext = self.globalTargetNet(nextState).detach()
         targetValues = reward + self.gamma * QNext.max(dim=1)[0].unsqueeze(-1)
 
-        loss = torch.mean(self.netLossFunc(QValues, targetValues))
+        loss = self.netLossFunc(QValues, targetValues)
 
         self.globalOptimizer.zero_grad()
 
@@ -210,7 +210,7 @@ class DQNA3CWorkerV2(mp.Process):
              gp._grad = lp._grad
 
         if self.netGradClip is not None:
-            torch.nn.utils.clip_grad_norm_(self.localNet.parameters(), self.netGradClip)
+            torch.nn.utils.clip_grad_norm_(self.globalPolicyNet.parameters(), self.netGradClip)
 
         # global net update
         self.globalOptimizer.step()

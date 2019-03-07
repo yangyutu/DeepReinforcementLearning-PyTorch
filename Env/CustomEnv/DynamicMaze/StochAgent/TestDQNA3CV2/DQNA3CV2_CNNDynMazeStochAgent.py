@@ -130,7 +130,7 @@ targetNet = MulChanConvNet(N_S, 128, N_A)
 optimizer = SharedAdam(policyNet.parameters(), lr=config['learningRate'])
 
 
-agent = DQNA3CMasterV2(policyNet, targetNet, env, optimizer, torch.nn.MSELoss(reduction='none'), N_A,
+agent = DQNA3CMasterV2(policyNet, targetNet, env, optimizer, torch.nn.MSELoss(), N_A,
                  stateProcessor=stateProcessor, config = config)
 
 
