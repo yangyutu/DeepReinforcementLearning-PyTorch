@@ -36,6 +36,9 @@ class DQNAsynERWorker(mp.Process):
         self.epIdx = 0
         self.totalStep = 0
         self.updateGlobalFrequency = 10
+        if 'updateGlobalFrequency' in self.config:
+            self.updateGlobalFrequency = self.config['updateGlobalFrequency']
+
         self.gamma = 0.99
         if 'gamma' in self.config:
             self.gamma = self.config['gamma']
@@ -122,7 +125,7 @@ class DQNAsynERWorker(mp.Process):
             self.memory.push(state, action, nextState, R)
 
     def run(self):
-
+        torch.set_num_threads(1)
         bufferState, bufferAction, bufferReward, bufferNextState = [], [], [], []
         for self.epIdx in range(self.trainStep):
 
@@ -167,6 +170,7 @@ class DQNAsynERWorker(mp.Process):
             self.globalEpisodeCount.value += 1
             if self.config['logFlag'] and self.globalEpisodeCount.value % self.config['logFrequency'] == 0:
                 self.save_checkpoint()
+                # sync global target to global policy net
             if self.globalEpisodeCount.value % self.targetNetUpdateEpisode == 0:
                 self.globalTargetNet.load_state_dict(self.globalPolicyNet.state_dict())
 
