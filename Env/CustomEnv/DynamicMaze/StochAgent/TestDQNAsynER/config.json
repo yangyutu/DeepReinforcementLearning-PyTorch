@@ -1,7 +1,7 @@
 {
     "mapName": "freeSpaceLarge",
     "JumpMatrix": "trajSampleHalf.npz",
-    "trainStep": 1000,
+    "trainStep": 100,
     "epsThreshold": 0.1,
     "epsilon_start": 0.5,
     "epsilon_final": 0.05,

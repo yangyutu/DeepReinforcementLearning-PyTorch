@@ -283,6 +283,9 @@ class DQNAsynERMaster(DQNAgent):
         self.globalPolicyNet.share_memory()
         self.globalTargetNet.share_memory()
 
+        self.env = env[0]
+        self.envs = env
+
         self.numWorkers = self.config['numWorkers']
 
         self.globalEpisodeCount = mp.Value('i', 0)
@@ -297,7 +300,7 @@ class DQNAsynERMaster(DQNAgent):
         self.workers = []
         for i in range(self.numWorkers):
             # local Net will not share memory
-            localEnv = deepcopy(self.env)
+            localEnv = self.envs[i]
             localNet = deepcopy(self.globalPolicyNet)
             worker = DQNAsynERWorker(self.config, localNet, localEnv, [self.globalPolicyNet, self.globalTargetNet], self.optimizer, self.netLossFunc,
                                     self.numAction, i, self.globalEpisodeCount, self.globalEpisodeReward,

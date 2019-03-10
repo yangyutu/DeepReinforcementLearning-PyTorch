@@ -118,10 +118,13 @@ def stateProcessor(state):
               'target': torch.tensor(targetList, dtype=torch.float32, device=config['device'])}
     return output
 
-env = DynamicMaze(config)
+envs = []
+for i in range(config['numWorkers']):
+    env = DynamicMaze(config)
+    envs.append(env)
 
-N_S = env.stateDim[0]
-N_A = env.nbActions
+N_S = envs[0].stateDim[0]
+N_A = envs[0].nbActions
 
 
 policyNet = MulChanConvNet(N_S, 128, N_A)
@@ -129,7 +132,7 @@ targetNet = MulChanConvNet(N_S, 128, N_A)
 optimizer = SharedAdam(policyNet.parameters(), lr=config['learningRate'])
 
 
-agent = DQNAsynERMaster(policyNet, targetNet, env, optimizer, torch.nn.MSELoss(), N_A,
+agent = DQNAsynERMaster(policyNet, targetNet, envs, optimizer, torch.nn.MSELoss(), N_A,
                  stateProcessor=stateProcessor, config = config)
 
 
