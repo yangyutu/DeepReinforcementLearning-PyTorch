@@ -459,7 +459,7 @@ class StochAgent(DetermAgent):
         return result
 
 class DynamicMaze:
-    def __init__(self, config, seed):
+    def __init__(self, config, seed = 1):
         self.config = config
         self.readMaze(config['mapName'])
         if self.config['dynamicObsFlag']:
