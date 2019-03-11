@@ -1,7 +1,7 @@
 {
     "mapName": "freeSpaceSmall",
     "JumpMatrix": "trajSampleHalf.npz",
-    "trainStep": 200,
+    "trainStep": 1000,
     "epsThreshold": 0.1,
     "epsilon_start": 0.5,
     "epsilon_final": 0.05,
@@ -16,7 +16,7 @@
     "logFrequency": 50,
     "priorityMemoryOption": false,
     "netUpdateOption": "doubleQ",
-    "netUpdateFrequency": 1,
+    "netUpdateFrequency": 5,
     "priorityMemory_absErrUpper": 5,
     "nStepForward": 10,
     "device": "cuda",
@@ -26,8 +26,8 @@
     "agentReceptHalfWidth": 5,
     "obstacleMapPaddingWidth": 10,
     "targetState": [
-        10.0,
-        10.0
+        5.0,
+        5.0
     ],
     "currentState": [
         1.0,

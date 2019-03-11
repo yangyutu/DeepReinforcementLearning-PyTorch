@@ -65,9 +65,7 @@ np.savetxt('StabilizerTwoPolicyBeforeTrain.txt', policy, fmt='%d')
 
 #agent.perform_random_exploration(10)
 agent.train()
-storeMemory = ReplayMemory(100000)
-agent.testPolicyNet(100, storeMemory)
-storeMemory.write_to_text('testPolicyMemory.txt')
+agent.testPolicyNet(100)
 
 #
 # def customPolicy(state):

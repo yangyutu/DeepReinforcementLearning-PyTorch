@@ -176,7 +176,7 @@ class DetermAgent:
         return combinedState
 
 class StochAgent(DetermAgent):
-    def __init__(self, config, mapMat, obsMap):
+    def __init__(self, config, mapMat, obsMap, seed = 1):
         super(StochAgent, self).__init__(config, mapMat, obsMap)
 
         self.config = config
@@ -228,10 +228,9 @@ class StochAgent(DetermAgent):
         if 'stochMoveFlag' in self.config:
             self.stochMoveFlag = self.config['stochMoveFlag']
 
-        self.randomSeed = 1
-        if 'randomSeed' in self.config:
-            self.randomSeed = self.config['randomSeed']
+        self.randomSeed = seed
         np.random.seed(self.randomSeed)
+        random.seed(self.randomSeed)
 
     def getSensorInfo(self):
     # sensor information needs to consider orientation information
@@ -460,7 +459,7 @@ class StochAgent(DetermAgent):
         return result
 
 class DynamicMaze:
-    def __init__(self, config):
+    def __init__(self, config, seed):
         self.config = config
         self.readMaze(config['mapName'])
         if self.config['dynamicObsFlag']:
@@ -469,7 +468,7 @@ class DynamicMaze:
 
         self.agent = DetermAgent(config, self.mapMat, self.obsMat)
         if self.config['stochAgent']:
-            self.agent = StochAgent(config, self.mapMat, self.obsMat)
+            self.agent = StochAgent(config, self.mapMat, self.obsMat, seed)
 
         self.nbActions = self.agent.nbActions
         self.stateDim = self.agent.stateDim

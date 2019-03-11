@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import torch
 
 torch.manual_seed(1)
-a = DQNAgent.NetUpdateOption.policyNet
+
 
 def plotPolicy(x, policy):
     plt.plot(x, policy)
@@ -70,9 +70,9 @@ np.savetxt('StabilizerPolicyBeforeTrain.txt', policy, fmt='%d')
 
 #agent.perform_random_exploration(10)
 agent.train()
-storeMemory = ReplayMemory(100000)
-agent.testPolicyNet(100, storeMemory)
-storeMemory.write_to_text('testPolicyMemory.txt')
+#storeMemory = ReplayMemory(100000)
+agent.testPolicyNet(100)
+#storeMemory.write_to_text('testPolicyMemory.txt')
 
 
 def customPolicy(state):

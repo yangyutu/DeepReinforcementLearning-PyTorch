@@ -15,16 +15,21 @@ config = dict()
 
 config['trainStep'] = 2000
 config['epsThreshold'] = 0.3
+config['epsilon_start'] = 0.3
+config['epsilon_final'] = 0.05
+config['epsilon_decay'] = 200
 config['targetNetUpdateStep'] = 100
-config['memoryCapacity'] = 2000
+config['memoryCapacity'] = 200000
 config['trainBatchSize'] = 32
 config['gamma'] = 0.9
-config['learningRate'] = 0.001
+config['learningRate'] = 0.0001
 config['netGradClip'] = 1
 config['logFlag'] = False
 config['logFileName'] = ''
 config['logFrequency'] = 50
-
+config['netUpdateOption'] = 'doubleQ'
+config['nStepForward'] = 3
+config['priorityMemoryOption'] = False
 env = MountainCarEnvCustom()
 
 N_S = env.observation_space.shape[0]

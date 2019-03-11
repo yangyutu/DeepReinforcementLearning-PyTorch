@@ -20,7 +20,8 @@ config['dynamicObsFlag'] = False
 config['agentReceptHalfWidth'] = 5
 config['obstacleMapPaddingWidth'] = 10
 config['targetState'] = (4, 4)
-config['dynamicTargetFlag'] = False
+config['dynamicTargetFlag'] = True
+config['targetMoveFreq'] = 2
 config['stochAgent'] = True
 config['currentState'] = (1.0, 1.0, 0.0)
 config['dynamicInitialStateFlag'] = True
@@ -49,9 +50,9 @@ def runEnv(env):
          state, reward, done, info = env.step(action)
          print("Hello, World! from " + current_process().name + "\n")
          print('step ' + str(i))
-         print(state)
-         print(reward)
-         print(done)
+         #print(state)
+         #print(reward)
+         #print(done)
          print(info)
 
 

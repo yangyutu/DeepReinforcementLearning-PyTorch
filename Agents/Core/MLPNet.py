@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-
+from utils.netInit import xavier_init
 
 class MultiLayerNetRegression(torch.nn.Module):
     def __init__(self, n_feature, n_hidden, n_output):
@@ -17,6 +17,8 @@ class MultiLayerNetRegression(torch.nn.Module):
                 hidLayer = torch.nn.Linear(n_hidden[idx-1], hidUnits)
             self.layers.append(hidLayer)
         self.predict = torch.nn.Linear(n_hidden[-1], n_output)
+
+        self.apply(xavier_init)
 
     def forward(self, x):
         for layer in self.layers:

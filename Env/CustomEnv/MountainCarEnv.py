@@ -5,7 +5,7 @@ class MountainCarEnvCustom(MountainCarEnv):
     def __init__(self):
         super(MountainCarEnvCustom, self).__init__()
         self.stepCount = 0
-        self.endStep = 200
+        self.endStep = 500
 
     def step(self, action):
         self.stepCount += 1

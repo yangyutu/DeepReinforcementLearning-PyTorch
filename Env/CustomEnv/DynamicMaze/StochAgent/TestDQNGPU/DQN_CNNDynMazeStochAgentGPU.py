@@ -20,7 +20,23 @@ torch.set_num_threads(1)
 configName = 'config.json'
 with open(configName,'r') as f:
     config = json.load(f)
-    
+
+def weights_init(m):
+    if type(m) == nn.Conv2d:
+        weight_shape = list(m.weight.data.size())
+        fan_in = np.prod(weight_shape[1:4])
+        fan_out = np.prod(weight_shape[2:4]) * weight_shape[0]
+        w_bound = np.sqrt(6. / (fan_in + fan_out))
+        m.weight.data.uniform_(-w_bound, w_bound)
+        m.bias.data.fill_(0)
+    if type(m) == nn.Linear:
+        weight_shape = list(m.weight.data.size())
+        fan_in = weight_shape[1]
+        fan_out = weight_shape[0]
+        w_bound = np.sqrt(6. / (fan_in + fan_out))
+        m.weight.data.uniform_(-w_bound, w_bound)
+        m.bias.data.fill_(0)
+
 # Convolutional neural network (two convolutional layers)
 class MulChanConvNet(nn.Module):
     def __init__(self, inputWidth, num_hidden, num_action):
@@ -48,7 +64,7 @@ class MulChanConvNet(nn.Module):
         self.fc0 = nn.Linear(2, 32)
         self.fc1 = nn.Linear(self.featureSize() + 32, num_hidden)
         self.fc2 = nn.Linear(num_hidden, num_action)
-
+        self.apply(weights_init)
     def forward(self, state):
         x = state['sensor']
         y = state['target']

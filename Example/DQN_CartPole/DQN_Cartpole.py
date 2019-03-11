@@ -19,7 +19,7 @@ config = dict()
 
 config['trainStep'] = 100
 config['epsThreshold'] = 0.1
-config['epsilon_start'] = 0.9
+config['epsilon_start'] = 0.7
 config['epsilon_final'] = 0.05
 config['epsilon_decay'] = 200
 config['targetNetUpdateStep'] = 100

@@ -82,6 +82,10 @@ class DQNAsynERWorker(mp.Process):
         self.epsilon_by_episode = lambda step: self.epsilon_final + (
                 self.epsilon_start - self.epsilon_final) * math.exp(-1. * step / self.epsilon_decay)
 
+        self.netUpdateOption = 'targetNet'
+        if 'netUpdateOption' in self.config:
+            self.netUpdateOption = self.config['netUpdateOption']
+
         self.nStepBuffer = []
 
         self.memoryCapacity = self.config['memoryCapacity']
@@ -216,12 +220,20 @@ class DQNAsynERWorker(mp.Process):
             action = torch.tensor(transitions.action, device=self.device, dtype=torch.long).unsqueeze(-1)  # shape(batch, 1)
             reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32).unsqueeze(-1)  # shape(batch, 1)
 
-            batchSize = reward.shape[0]
-
             QValues = self.localNet(state).gather(1, action)
-            # note that here use targetNet for target value
-            QNext = self.globalTargetNet(nextState).detach()
-            targetValues = reward + self.gamma * QNext.max(dim=1)[0].unsqueeze(-1)
+
+            if self.netUpdateOption == 'targetNet':
+                 # Here we detach because we do not want gradient flow from target values to net parameters
+                 QNext = self.globalTargetNet(nextState).detach()
+                 targetValues = reward + self.gamma * QNext.max(dim=1)[0].unsqueeze(-1)
+            if self.netUpdateOption == 'policyNet':
+                targetValues = reward + self.gamma * torch.max(self.globalPolicyNet(nextState).detach(), dim=1)[0].unsqueeze(-1)
+            if self.netUpdateOption == 'doubleQ':
+                 # select optimal action from policy net
+                 with torch.no_grad():
+                    batchAction = self.globalPolicyNet(nextState).max(dim=1)[1].unsqueeze(-1)
+                    QNext = self.globalTargetNet(nextState).detach()
+                    targetValues = reward + self.gamma * QNext.gather(1, batchAction)
 
             loss = self.netLossFunc(QValues, targetValues)
 
