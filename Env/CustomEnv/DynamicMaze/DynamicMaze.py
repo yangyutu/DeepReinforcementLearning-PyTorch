@@ -290,18 +290,20 @@ class StochAgent(DetermAgent):
     def step(self, action):
 
         reward = 0.0
+        rewardScale = 40.0
         if action == 1:
-            jmRaw = self.jumpMatEpisode[self.stepCount, :]
-
-            # for symmetric dynamics
-            if random.random() < 0.5:
-                jmRaw[1] = -jmRaw[1]
-                jmRaw[2] = -jmRaw[2]
-
             # enforce deterministic
             if not self.stochMoveFlag:
-                jmRaw[0] = 2.0
-                jmRaw[1] = 0.0
+                jmRaw = np.array([2.0, 0, 0], dtype=np.float32)
+            else:
+                jmRaw = self.jumpMatEpisode[self.stepCount, :]
+
+                # for symmetric dynamics
+                if random.random() < 0.5:
+                    jmRaw[1] = -jmRaw[1]
+                    jmRaw[2] = -jmRaw[2]
+
+
 
         if action == 0:
             jmRaw = np.array([random.gauss(0, self.xyStd),
@@ -325,7 +327,7 @@ class StochAgent(DetermAgent):
         else:
             jm = np.array([0.0, 0.0, jmRaw[2]], dtype=np.float32)
             # penality to hit wall
-            reward -= 5
+            reward -= 5 / rewardScale
 
         #print(action)
         #print(jm)
@@ -358,19 +360,19 @@ class StochAgent(DetermAgent):
 
         # rewards for achieving smaller distance
         if self.minDistSoFar > (normDist + 1):
+            reward += (self.minDistSoFar - normDist) /rewardScale
             self.minDistSoFar = normDist
-            reward += 1
 
-        if np.linalg.norm(distance, ord=np.inf) < 2.0:
-            reward += 20
+        if self.is_terminal(distance):
+            reward += 40.0 / rewardScale
             done = True
         else:
-            reward -= 0.1 # penality for slowness
+            #reward -= 0.1 # penality for slowness
             done = False
 
-        if self.stepCount > self.endStep:
-            done = True
-            reward = 0.0
+        #if self.stepCount > self.endStep:
+        #    done = True
+        #    reward = 0.0
 
         # update sensor information
         self.getSensorInfo()
@@ -391,13 +393,16 @@ class StochAgent(DetermAgent):
                          'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor])}
         return combinedState, reward, done, info
 
+    def is_terminal(self, distance):
+        return np.linalg.norm(distance, ord=np.inf) < 2.0
+
     def reset_helper(self):
 
         if self.config['dynamicInitialStateFlag']:
             while True:
                 index = random.randint(0, self.mapMat.size - 1)
                 col = index % self.mapMat.shape[1]
-                row = index // self.mapMat.shape[1]
+                row = index % self.mapMat.shape[0]
                 if self.mapMat[row, col] == 0:
                     break
             # set initial state
@@ -412,16 +417,16 @@ class StochAgent(DetermAgent):
             while True:
                 index = random.randint(0, self.mapMat.size - 1)
                 col = index % self.mapMat.shape[1]
-                row = index // self.mapMat.shape[1]
+                row = index % self.mapMat.shape[0]
                 distanctVec = np.array([row, col], dtype=np.float32) - self.currentState[0:2]
                 distance = np.linalg.norm(distanctVec, ord=np.inf)
-                if self.mapMat[row, col] == 0 and distance < targetThresh:
+                if self.mapMat[row, col] == 0 and distance < targetThresh and not self.is_terminal(distanctVec):
                     break
             self.targetState = np.array([row, col], dtype=np.int32)
 
     def reset(self):
         self.stepCount = 0
-        self.minDistSoFar = float('inf')
+
         self.epiCount += 1
         # store random jump for this episode
         randomIdx = np.random.choice(self.jumpMat.shape[0], self.endStep + 10)
@@ -429,11 +434,14 @@ class StochAgent(DetermAgent):
 
         self.currentState = np.array(self.config['currentState'], dtype=np.float32)
         self.targetState = np.array(self.config['targetState'], dtype=np.int32)
+
         self.reset_helper()
 
         # update sensor information
         self.getSensorInfo()
         distance = self.targetState - self.currentState[0:2]
+
+        self.minDistSoFar = np.linalg.norm(distance, ord=2)
         # distance will be change to local coordinate
         phi = self.currentState[2]
         dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)

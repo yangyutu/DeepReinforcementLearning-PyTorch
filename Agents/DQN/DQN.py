@@ -88,6 +88,9 @@ class DQNAgent(Agent):
         self.lossRecordStep = 10
         if 'lossRecordStep' in self.config:
             self.lossRecordStep = self.config['lossRecordStep']
+        self.episodeLength = 500
+        if 'episodeLength' in self.config:
+            self.episodeLength = self.config['episodeLength']
 
 
 
@@ -100,7 +103,7 @@ class DQNAgent(Agent):
                 # self.policyNet(torch.from_numpy(state.astype(np.float32)).unsqueeze(0))
                 # here state[np.newaxis,:] is to add a batch dimension
                 if self.stateProcessor is not None:
-                    state = self.stateProcessor([state])
+                    state, _ = self.stateProcessor([state], self.device)
                     QValues = net(state)
                 else:
                     QValues = net(torchvector(state[np.newaxis, :]).to(self.device))
@@ -124,12 +127,11 @@ class DQNAgent(Agent):
             state = self.env.reset()
             done = False
             rewardSum = 0
-            stepCount = 0
 
             # clear the nstep buffer
             self.nStepBuffer.clear()
 
-            while not done:
+            for stepCount in range(self.episodeLength):
                 self.epsThreshold = self.epsilon_by_step(self.globalStepCount)
 
                 action = self.select_action(self.policyNet, state, self.epsThreshold)
@@ -140,12 +142,15 @@ class DQNAgent(Agent):
                     print("at step 0:")
                     print(info)
 
+                if done:
+                    nextState = None
+
                 # learn the transition
                 self.update_net(state, action, nextState, reward)
 
                 state = nextState
-                rewardSum += reward
-
+                rewardSum += reward * pow(self.gamma, stepCount)
+                self.globalStepCount += 1
 
                 if self.verbose:
                     print('action: ' + str(action))
@@ -156,21 +161,21 @@ class DQNAgent(Agent):
                     print('info')
                     print(info)
 
-
                 if done:
-                    runningAvgEpisodeReward = (runningAvgEpisodeReward*self.epIdx + rewardSum)/(self.epIdx + 1)
-                    print("done in step count: {}".format(stepCount))
-                    print("reward sum = " + str(rewardSum))
-                    print("running average episode reward sum: {}".format(runningAvgEpisodeReward))
-                    print(info)
-
-                    self.rewards.append([self.epIdx, stepCount, self.globalStepCount, rewardSum, runningAvgEpisodeReward])
-                    if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
-                        self.save_checkpoint()
                     break
 
-                stepCount += 1
-                self.globalStepCount += 1
+            runningAvgEpisodeReward = (runningAvgEpisodeReward*self.epIdx + rewardSum)/(self.epIdx + 1)
+            print("done in step count: {}".format(stepCount))
+            print("reward sum = " + str(rewardSum))
+            print("running average episode reward sum: {}".format(runningAvgEpisodeReward))
+            print(info)
+
+            self.rewards.append([self.epIdx, stepCount, self.globalStepCount, rewardSum, runningAvgEpisodeReward])
+            if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
+                self.save_checkpoint()
+
+
+
             self.epIdx += 1
         self.save_all()
 
@@ -232,18 +237,19 @@ class DQNAgent(Agent):
         # https://stackoverflow.com/questions/19339/transpose-unzip-function-inverse-of-zip/19343#19343
 
         transitions = Transition(*zip(*transitions_raw))
+        action = torch.tensor(transitions.action, device=self.device, dtype=torch.long).unsqueeze(-1) # shape(batch, 1)
+        reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32).unsqueeze(-1) # shape(batch, 1)
+        batchSize = reward.shape[0]
+
 
         # for some env, the output state requires further processing before feeding to neural network
         if self.stateProcessor is not None:
-            state = self.stateProcessor(transitions.state)
-            nextState = self.stateProcessor(transitions.next_state)
+            state, _ = self.stateProcessor(transitions.state, self.device)
+            nonFinalNextState, nonFinalMask = self.stateProcessor(transitions.next_state, self.device)
         else:
             state = torch.tensor(transitions.state, device=self.device, dtype=torch.float32)
-            nextState = torch.tensor(transitions.next_state, device=self.device, dtype=torch.float32)
-        action = torch.tensor(transitions.action, device=self.device, dtype=torch.long).unsqueeze(-1) # shape(batch, 1)
-        reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32).unsqueeze(-1) # shape(batch, 1)
-
-        batchSize = reward.shape[0]
+            nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)), device=self.device, dtype=torch.uint8)
+            nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None], device=self.device, dtype=torch.float32)
 
         for step in range(gradientStep):
             # calculate Qvalues based on selected action batch
@@ -251,16 +257,19 @@ class DQNAgent(Agent):
 
             if updateOption == 'targetNet':
                  # Here we detach because we do not want gradient flow from target values to net parameters
-                 QNext = self.targetNet(nextState).detach()
-                 targetValues = reward + self.gamma * QNext.max(dim=1)[0].unsqueeze(-1)
+                 QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32)
+                 QNext[nonFinalMask] = self.targetNet(nonFinalNextState).max(1)[0].detach()
+                 targetValues = reward + self.gamma * QNext.unsqueeze(-1)
             if updateOption == 'policyNet':
+                raise NotImplementedError
                 targetValues = reward + self.gamma * torch.max(self.policyNet(nextState).detach(), dim=1)[0].unsqueeze(-1)
             if updateOption == 'doubleQ':
                  # select optimal action from policy net
                  with torch.no_grad():
-                    batchAction = self.policyNet(nextState).max(dim=1)[1].unsqueeze(-1)
-                    QNext = self.targetNet(nextState).detach()
-                    targetValues = reward + self.gamma * QNext.gather(1, batchAction)
+                    batchAction = self.policyNet(nonFinalNextState).max(dim=1)[1].unsqueeze(-1)
+                    QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32).unsqueeze(-1)
+                    QNext[nonFinalMask] = self.targetNet(nonFinalNextState).gather(1, batchAction)
+                    targetValues = reward + self.gamma * QNext
 
             # Compute loss
             loss_single = loss_fun(QValues, targetValues)

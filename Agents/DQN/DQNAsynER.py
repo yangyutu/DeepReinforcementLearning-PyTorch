@@ -20,7 +20,7 @@ from torch.multiprocessing import current_process
 class DQNAsynERWorker(mp.Process):
     def __init__(self, config, localNet, env, globalNets, globalOptimizer, netLossFunc, nbAction, rank,
                  globalEpisodeCount, globalEpisodeReward, globalRunningAvgReward, resultQueue, logFolder,
-                stateProcessor = None):
+                stateProcessor = None, lock = None):
         super(DQNAsynERWorker, self).__init__()
         self.config = config
         self.globalPolicyNet = globalNets[0]
@@ -94,6 +94,16 @@ class DQNAsynERWorker(mp.Process):
 
         self.priorityMemoryOption = False
 
+        self.episodeLength = 500
+        if 'episodeLength' in self.config:
+            self.episodeLength = self.config['episodeLength']
+
+        self.synchLock = False
+        if 'synchLock' in self.config:
+            self.synchLock = self.config['synchLock']
+
+        self.lock = lock
+
     def select_action(self, net, state, epsThreshold):
 
         # get a random number so that we can do epsilon exploration
@@ -103,7 +113,7 @@ class DQNAsynERWorker(mp.Process):
                 # self.policyNet(torch.from_numpy(state.astype(np.float32)).unsqueeze(0))
                 # here state[np.newaxis,:] is to add a batch dimension
                 if self.stateProcessor is not None:
-                    state = self.stateProcessor([state])
+                    state, _ = self.stateProcessor([state], self.device)
                     QValues = net(state)
                 else:
                     QValues = net(torchvector(state[np.newaxis, :]).to(self.device))
@@ -137,31 +147,36 @@ class DQNAsynERWorker(mp.Process):
             state = self.env.reset()
             done = False
             rewardSum = 0
-            stepCount = 0
+
 
             # clear the nstep buffer
             self.nStepBuffer.clear()
 
-            while not done:
+            for stepCount in range(self.episodeLength):
 
                 episode = self.epsilon_by_episode(self.globalEpisodeCount.value)
                 action = self.select_action(self.localNet, state, episode)
                 nextState, reward, done, info = self.env.step(action)
 
+                if done:
+                    nextState = None
+
                 self.update_net_and_sync(state, action, nextState, reward)
 
                 state = nextState
-                rewardSum += reward
+                rewardSum += reward * pow(self.gamma, stepCount)
 
+                self.totalStep += 1
                 if done:
 #                    print("done in step count: {}".format(stepCount))
 #                    print("reward sum = " + str(rewardSum))
                 # done and print information
                 #    pass
-                    self.recordInfo(rewardSum, stepCount)
+                    break
 
-                stepCount += 1
-                self.totalStep += 1
+            self.recordInfo(rewardSum, stepCount)
+
+
         self.resultQueue.put(None)
 
     def recordInfo(self, reward, stepCount):
@@ -209,50 +224,98 @@ class DQNAsynERWorker(mp.Process):
         if self.totalStep % self.updateGlobalFrequency == 0:
             transitions_raw = self.memory.sample(self.trainBatchSize)
             transitions = Transition(*zip(*transitions_raw))
+            action = torch.tensor(transitions.action, device=self.device, dtype=torch.long).unsqueeze(
+                -1)  # shape(batch, 1)
+            reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32).unsqueeze(
+                -1)  # shape(batch, 1)
+            batchSize = reward.shape[0]
+
 
             # for some env, the output state requires further processing before feeding to neural network
             if self.stateProcessor is not None:
-                state = self.stateProcessor(transitions.state)
-                nextState = self.stateProcessor(transitions.next_state)
+                state, _ = self.stateProcessor(transitions.state, self.device)
+                nonFinalNextState, nonFinalMask = self.stateProcessor(transitions.next_state, self.device)
             else:
                 state = torch.tensor(transitions.state, device=self.device, dtype=torch.float32)
-                nextState = torch.tensor(transitions.next_state, device=self.device, dtype=torch.float32)
-            action = torch.tensor(transitions.action, device=self.device, dtype=torch.long).unsqueeze(-1)  # shape(batch, 1)
-            reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32).unsqueeze(-1)  # shape(batch, 1)
+                nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)),
+                                            device=self.device, dtype=torch.uint8)
+                nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None],
+                                                 device=self.device, dtype=torch.float32)
+            if self.synchLock:
 
-            QValues = self.localNet(state).gather(1, action)
+                self.lock.acquire()
+                QValues = self.globalPolicyNet(state).gather(1, action)
 
-            if self.netUpdateOption == 'targetNet':
-                 # Here we detach because we do not want gradient flow from target values to net parameters
-                 QNext = self.globalTargetNet(nextState).detach()
-                 targetValues = reward + self.gamma * QNext.max(dim=1)[0].unsqueeze(-1)
-            if self.netUpdateOption == 'policyNet':
-                targetValues = reward + self.gamma * torch.max(self.globalPolicyNet(nextState).detach(), dim=1)[0].unsqueeze(-1)
-            if self.netUpdateOption == 'doubleQ':
-                 # select optimal action from policy net
-                 with torch.no_grad():
-                    batchAction = self.globalPolicyNet(nextState).max(dim=1)[1].unsqueeze(-1)
-                    QNext = self.globalTargetNet(nextState).detach()
-                    targetValues = reward + self.gamma * QNext.gather(1, batchAction)
+                if self.netUpdateOption == 'targetNet':
+                    # Here we detach because we do not want gradient flow from target values to net parameters
+                    QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32)
+                    QNext[nonFinalMask] = self.globalTargetNet(nonFinalNextState).max(1)[0].detach()
+                    targetValues = reward + self.gamma * QNext.unsqueeze(-1)
+                if self.netUpdateOption == 'policyNet':
+                    raise NotImplementedError
+                    targetValues = reward + self.gamma * torch.max(self.globalPolicyNet(nextState).detach(), dim=1)[0].unsqueeze(-1)
+                if self.netUpdateOption == 'doubleQ':
+                     # select optimal action from policy net
+                     with torch.no_grad():
+                        batchAction = self.globalPolicyNet(nonFinalNextState).max(dim=1)[1].unsqueeze(-1)
+                        QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32).unsqueeze(-1)
+                        QNext[nonFinalMask] = self.globalTargetNet(nonFinalNextState).gather(1, batchAction)
+                        targetValues = reward + self.gamma * QNext
 
-            loss = self.netLossFunc(QValues, targetValues)
+                loss = self.netLossFunc(QValues, targetValues)
 
-            self.globalOptimizer.zero_grad()
+                self.globalOptimizer.zero_grad()
 
-            loss.backward()
+                loss.backward()
 
-            for lp, gp in zip(self.localNet.parameters(), self.globalPolicyNet.parameters()):
-                 gp._grad = lp._grad
+                if self.netGradClip is not None:
+                    torch.nn.utils.clip_grad_norm_(self.globalPolicyNet.parameters(), self.netGradClip)
 
-            if self.netGradClip is not None:
-                torch.nn.utils.clip_grad_norm_(self.globalPolicyNet.parameters(), self.netGradClip)
+                # global net update
+                self.globalOptimizer.step()
+                #
+                # # update local net
+                self.localNet.load_state_dict(self.globalPolicyNet.state_dict())
 
-            # global net update
-            self.globalOptimizer.step()
-            #
-            # # update local net
-            self.localNet.load_state_dict(self.globalPolicyNet.state_dict())
+                self.lock.release()
+            else:
 
+                QValues = self.localNet(state).gather(1, action)
+
+                if self.netUpdateOption == 'targetNet':
+                    # Here we detach because we do not want gradient flow from target values to net parameters
+                    QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32)
+                    QNext[nonFinalMask] = self.globalTargetNet(nonFinalNextState).max(1)[0].detach()
+                    targetValues = reward + self.gamma * QNext.unsqueeze(-1)
+                if self.netUpdateOption == 'policyNet':
+                    raise NotImplementedError
+                    targetValues = reward + self.gamma * torch.max(self.globalPolicyNet(nextState).detach(), dim=1)[
+                        0].unsqueeze(-1)
+                if self.netUpdateOption == 'doubleQ':
+                    # select optimal action from policy net
+                    with torch.no_grad():
+                        batchAction = self.localNet(nonFinalNextState).max(dim=1)[1].unsqueeze(-1)
+                        QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32).unsqueeze(-1)
+                        QNext[nonFinalMask] = self.globalTargetNet(nonFinalNextState).gather(1, batchAction)
+                        targetValues = reward + self.gamma * QNext
+
+                loss = self.netLossFunc(QValues, targetValues)
+
+                self.globalOptimizer.zero_grad()
+
+                loss.backward()
+
+                for lp, gp in zip(self.localNet.parameters(), self.globalPolicyNet.parameters()):
+                    gp._grad = lp._grad
+
+                if self.netGradClip is not None:
+                    torch.nn.utils.clip_grad_norm_(self.globalPolicyNet.parameters(), self.netGradClip)
+
+                # global net update
+                self.globalOptimizer.step()
+                #
+                # # update local net
+                self.localNet.load_state_dict(self.globalPolicyNet.state_dict())
 
     def test_multiProcess(self):
         print("Hello, World! from " + current_process().name + "\n")
@@ -305,18 +368,26 @@ class DQNAsynERMaster(DQNAgent):
         self.globalRunningAvgReward = mp.Value('d', 0)
         self.resultQueue = mp.Queue()
 
+        self.synchLock = False
+        if 'synchLock' in self.config:
+            self.synchLock = self.config['synchLock']
+
+
+
+
         self.construct_workers()
 
 
     def construct_workers(self):
         self.workers = []
+        lock = mp.Lock()
         for i in range(self.numWorkers):
             # local Net will not share memory
             localEnv = self.envs[i]
             localNet = deepcopy(self.globalPolicyNet)
             worker = DQNAsynERWorker(self.config, localNet, localEnv, [self.globalPolicyNet, self.globalTargetNet], self.optimizer, self.netLossFunc,
                                     self.numAction, i, self.globalEpisodeCount, self.globalEpisodeReward,
-                                    self.globalRunningAvgReward, self.resultQueue, self.dirName, self.stateProcessor)
+                                    self.globalRunningAvgReward, self.resultQueue, self.dirName, stateProcessor=self.stateProcessor, lock=lock)
             self.workers.append(worker)
 
     def test_multiProcess(self):
