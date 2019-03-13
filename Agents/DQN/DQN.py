@@ -1,5 +1,5 @@
 
-from Agents.Core.Agent import Agent
+from Agents.DQN.BaseDQN import BaseDQNAgent
 from Agents.Core.ReplayMemory import ReplayMemory, Transition
 from Agents.Core.PrioritizedReplayMemory import PrioritizedReplayMemory
 from utils.utils import torchvector
@@ -19,101 +19,25 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
-class DQNAgent(Agent):
+class DQNAgent(BaseDQNAgent):
 
-    def __init__(self, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None, **kwargs):
-        super(DQNAgent, self).__init__(**kwargs)
+    def __init__(self, config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None):
+        super(DQNAgent, self).__init__(config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor)
 
-        self.read_config()
-        self.policyNet = policyNet
-        self.targetNet = targetNet
-        self.env = env
-        self.optimizer = optimizer
-        self.numAction = nbAction
         if self.priorityMemoryOption:
             self.memory = PrioritizedReplayMemory(self.memoryCapacity, self.config)
         else:
             self.memory = ReplayMemory(self.memoryCapacity)
-        self.learnStepCounter = 0  #for target net update
-        self.stateProcessor = stateProcessor
-        self.netLossFunc = netLossFunc
-
-        # move model to correct device
-        self.policyNet = self.policyNet.to(self.device)
-
-        # in case targetNet is None
-        if self.targetNet is not None:
-            self.targetNet = self.targetNet.to(self.device)
-
-        self.dirName = 'Log/'
-        if 'dataLogFolder' in self.config:
-            self.dirName = self.config['dataLogFolder']
-        if not os.path.exists(self.dirName):
-            os.makedirs(self.dirName)
-
-
-        self.nStepBuffer = []
-
-        self.identifier = ''
-        self.epIdx = 0
 
     def read_config(self):
-        self.trainStep = self.config['trainStep']
-        self.targetNetUpdateStep = 10000
-        if 'targetNetUpdateStep' in self.config:
-            self.targetNetUpdateStep = self.config['targetNetUpdateStep']
-
+        super(DQNAgent, self).read_config()
+        # read additional parameters
         self.memoryCapacity = self.config['memoryCapacity']
-        self.trainBatchSize = self.config['trainBatchSize']
-        self.gamma = self.config['gamma']
 
-        self.netGradClip = None
-        if 'netGradClip' in self.config:
-            self.netGradClip = self.config['netGradClip']
-        self.netUpdateOption = 'targetNet'
-        if 'netUpdateOption' in self.config:
-            self.netUpdateOption = self.config['netUpdateOption']
         self.priorityMemoryOption = False
         if 'priorityMemoryOption' in self.config:
             self.priorityMemoryOption = self.config['priorityMemoryOption']
-        self.verbose = False
-        if 'verbose' in self.config:
-            self.verbose = self.config['verbose']
-        self.netUpdateFrequency = 1
-        if 'netUpdateFrequency' in self.config:
-            self.netUpdateFrequency = self.config['netUpdateFrequency']
-        self.nStepForward = 1
-        if 'nStepForward' in self.config:
-            self.nStepForward = self.config['nStepForward']
-        self.lossRecordStep = 10
-        if 'lossRecordStep' in self.config:
-            self.lossRecordStep = self.config['lossRecordStep']
-        self.episodeLength = 500
-        if 'episodeLength' in self.config:
-            self.episodeLength = self.config['episodeLength']
 
-
-
-    def select_action(self, net, state, epsThreshold):
-
-        # get a random number so that we can do epsilon exploration
-        randNum = random.random()
-        if randNum > epsThreshold:
-            with torch.no_grad():
-                # self.policyNet(torch.from_numpy(state.astype(np.float32)).unsqueeze(0))
-                # here state[np.newaxis,:] is to add a batch dimension
-                if self.stateProcessor is not None:
-                    state, _ = self.stateProcessor([state], self.device)
-                    QValues = net(state)
-                else:
-                    QValues = net(torchvector(state[np.newaxis, :]).to(self.device))
-                action = torch.argmax(QValues).item()
-        else:
-            action = random.randint(0, self.numAction-1)
-        return action
-
-    def getPolicy(self, state):
-        return self.select_action(self.policyNet, state, -0.01)
 
     def train(self):
 
