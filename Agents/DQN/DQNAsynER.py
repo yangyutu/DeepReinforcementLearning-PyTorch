@@ -124,19 +124,52 @@ class DQNAsynERWorker(mp.Process):
 
 
     def store_experience(self, state, action, nextState, reward):
-        self.nStepBuffer.append((state, action, nextState, reward))
+        # caution: using multiple step forward return can increase variance
+        if self.nStepForward > 1:
 
-        if len(self.nStepBuffer) < self.nStepForward:
-            return
+            # if this is final state, we want to do additional backup to increase useful learning experience
+            if nextState is None:
+                transitions = []
+                transitions.append(Transition(state, action, nextState, reward))
+                R = reward
+                while len(self.nStepBuffer) > 0:
+                    state, action, next_state, reward_old = self.nStepBuffer.pop(0)
+                    R = reward_old + self.gamma * R
+                    transNew = Transition(state, action, None, R)
+                    transitions.append(transNew)
+                for tran in transitions:
+                    if self.priorityMemoryOption:
+                        self.memory.store(tran)
+                    else:
+                        self.memory.push(tran)
 
-        R = sum([self.nStepBuffer[i][3]*(self.gamma**i) for i in range(self.nStepForward)])
+            else:
+                # otherwise we calculate normal n step return
+                self.nStepBuffer.append((state, action, nextState, reward))
 
-        state, action, _, _ = self.nStepBuffer.pop(0)
+                if len(self.nStepBuffer) < self.nStepForward:
+                    return
 
-        if self.priorityMemoryOption:
-            self.memory.store(Transition(state, action, nextState, R))
+                R = sum([self.nStepBuffer[i][3]*(self.gamma**i) for i in range(self.nStepForward)])
+
+                state, action, _, _ = self.nStepBuffer.pop(0)
+
+                transition = Transition(state, action, nextState, R)
+
+                if self.priorityMemoryOption:
+                    self.memory.store(transition)
+                else:
+                    self.memory.push(transition)
+
         else:
-            self.memory.push(state, action, nextState, R)
+            # if it is one step
+            transition = Transition(state, action, nextState, reward)
+
+            if self.priorityMemoryOption:
+                self.memory.store(transition)
+            else:
+                self.memory.push(transition)
+
 
     def run(self):
         torch.set_num_threads(1)
@@ -154,9 +187,13 @@ class DQNAsynERWorker(mp.Process):
 
             for stepCount in range(self.episodeLength):
 
-                episode = self.epsilon_by_episode(self.globalEpisodeCount.value)
-                action = self.select_action(self.localNet, state, episode)
+                epsilon = self.epsilon_by_episode(self.globalEpisodeCount.value)
+                action = self.select_action(self.localNet, state, epsilon)
                 nextState, reward, done, info = self.env.step(action)
+
+                if stepCount == 0:
+                    print("at step 0: from " + current_process().name + "\n")
+                    print(info)
 
                 if done:
                     nextState = None
@@ -280,6 +317,9 @@ class DQNAsynERWorker(mp.Process):
                 self.lock.release()
             else:
 
+                # update local net
+                self.localNet.load_state_dict(self.globalPolicyNet.state_dict())
+
                 QValues = self.localNet(state).gather(1, action)
 
                 if self.netUpdateOption == 'targetNet':
@@ -301,9 +341,11 @@ class DQNAsynERWorker(mp.Process):
 
                 loss = self.netLossFunc(QValues, targetValues)
 
-                self.globalOptimizer.zero_grad()
-
                 loss.backward()
+
+                self.lock.acquire()
+
+                self.globalOptimizer.zero_grad()
 
                 for lp, gp in zip(self.localNet.parameters(), self.globalPolicyNet.parameters()):
                     gp._grad = lp._grad
@@ -313,6 +355,8 @@ class DQNAsynERWorker(mp.Process):
 
                 # global net update
                 self.globalOptimizer.step()
+
+                self.lock.release()
                 #
                 # # update local net
                 self.localNet.load_state_dict(self.globalPolicyNet.state_dict())
@@ -351,8 +395,8 @@ class SharedAdam(torch.optim.Adam):
                 state['exp_avg_sq'].share_memory_()
 
 class DQNAsynERMaster(DQNAgent):
-    def __init__(self, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None, **kwargs):
-        super(DQNAsynERMaster, self).__init__(policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor, **kwargs)
+    def __init__(self, config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None):
+        super(DQNAsynERMaster, self).__init__(config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor)
         self.globalPolicyNet = policyNet
         self.globalTargetNet = targetNet
         self.globalPolicyNet.share_memory()

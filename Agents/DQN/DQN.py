@@ -1,8 +1,8 @@
 
 from Agents.DQN.BaseDQN import BaseDQNAgent
 from Agents.Core.ReplayMemory import ReplayMemory, Transition
+from Agents.Core.ReplayMemoryReward import ReplayMemoryReward
 from Agents.Core.PrioritizedReplayMemory import PrioritizedReplayMemory
-from utils.utils import torchvector
 import random
 import torch
 import torch.optim
@@ -24,19 +24,34 @@ class DQNAgent(BaseDQNAgent):
     def __init__(self, config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None):
         super(DQNAgent, self).__init__(config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor)
 
+
+
+
+
         if self.priorityMemoryOption:
             self.memory = PrioritizedReplayMemory(self.memoryCapacity, self.config)
         else:
-            self.memory = ReplayMemory(self.memoryCapacity)
+            if self.memoryOption == 'natural':
+                self.memory = ReplayMemory(self.memoryCapacity)
+            elif self.memoryOption == 'reward':
+                self.memory = ReplayMemoryReward(self.memoryCapacity, self.config['rewardMemoryBackupStep'],
+                                                 self.gamma, self.config['rewardMemoryTerminalRatio'] )
 
     def read_config(self):
         super(DQNAgent, self).read_config()
         # read additional parameters
         self.memoryCapacity = self.config['memoryCapacity']
 
+        self.memoryOption = 'natural'
         self.priorityMemoryOption = False
-        if 'priorityMemoryOption' in self.config:
-            self.priorityMemoryOption = self.config['priorityMemoryOption']
+        if 'memoryOption' in self.config:
+            self.memoryOption = self.config['memoryOption']
+            if self.memoryOption == 'priority':
+                self.priorityMemoryOption = True
+                # reward memory requires nstep forward to be 1
+            if self.memoryOption == 'reward':
+                self.nStepForward = 1
+
 
 
     def train(self):
@@ -104,19 +119,59 @@ class DQNAgent(BaseDQNAgent):
         self.save_all()
 
     def store_experience(self, state, action, nextState, reward):
-        self.nStepBuffer.append((state, action, nextState, reward))
 
-        if len(self.nStepBuffer) < self.nStepForward:
-            return
+        # caution: using multiple step forward return can increase variance
+        if self.nStepForward > 1:
 
-        R = sum([self.nStepBuffer[i][3]*(self.gamma**i) for i in range(self.nStepForward)])
+            # if this is final state, we want to do additional backup to increase useful learning experience
+            if nextState is None:
+                transitions = []
+                transitions.append(Transition(state, action, nextState, reward))
+                R = reward
+                while len(self.nStepBuffer) > 0:
+                    state, action, next_state, reward_old = self.nStepBuffer.pop(0)
+                    R = reward_old + self.gamma * R
+                    transNew = Transition(state, action, None, R)
+                    transitions.append(transNew)
+                for tran in transitions:
+                    if self.priorityMemoryOption:
+                        self.memory.store(tran)
+                    else:
+                        self.memory.push(tran)
 
-        state, action, _, _ = self.nStepBuffer.pop(0)
+            else:
+                # otherwise we calculate normal n step return
+                self.nStepBuffer.append((state, action, nextState, reward))
 
-        if self.priorityMemoryOption:
-            self.memory.store(Transition(state, action, nextState, R))
+                if len(self.nStepBuffer) < self.nStepForward:
+                    return
+
+                R = sum([self.nStepBuffer[i][3]*(self.gamma**i) for i in range(self.nStepForward)])
+
+                state, action, _, _ = self.nStepBuffer.pop(0)
+
+                transition = Transition(state, action, nextState, R)
+
+                if self.priorityMemoryOption:
+                    self.memory.store(transition)
+                else:
+                    self.memory.push(transition)
+
+
+
+
+
         else:
-            self.memory.push(state, action, nextState, R)
+            # if it is one step
+            transition = Transition(state, action, nextState, reward)
+
+            if self.priorityMemoryOption:
+                self.memory.store(transition)
+            else:
+                self.memory.push(transition)
+
+
+
 
     def update_net(self, state, action, nextState, reward):
 
@@ -183,7 +238,7 @@ class DQNAgent(BaseDQNAgent):
                  # Here we detach because we do not want gradient flow from target values to net parameters
                  QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32)
                  QNext[nonFinalMask] = self.targetNet(nonFinalNextState).max(1)[0].detach()
-                 targetValues = reward + self.gamma * QNext.unsqueeze(-1)
+                 targetValues = reward + (self.gamma**self.nStepForward) * QNext.unsqueeze(-1)
             if updateOption == 'policyNet':
                 raise NotImplementedError
                 targetValues = reward + self.gamma * torch.max(self.policyNet(nextState).detach(), dim=1)[0].unsqueeze(-1)
@@ -193,7 +248,7 @@ class DQNAgent(BaseDQNAgent):
                     batchAction = self.policyNet(nonFinalNextState).max(dim=1)[1].unsqueeze(-1)
                     QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32).unsqueeze(-1)
                     QNext[nonFinalMask] = self.targetNet(nonFinalNextState).gather(1, batchAction)
-                    targetValues = reward + self.gamma * QNext
+                    targetValues = reward + (self.gamma**self.nStepForward) * QNext
 
             # Compute loss
             loss_single = loss_fun(QValues, targetValues)

@@ -213,7 +213,7 @@ class StochAgent(DetermAgent):
         self.thresh_by_episode = lambda step: self.endThresh + (
                 self.startThresh - self.endThresh) * math.exp(-1. * step / self.distanceThreshDecay)
 
-        self.config['targetThreshFlag'] = False
+        self.targetThreshFlag = False
         if 'targetThreshFlag' in self.config:
             self.targetThreshFlag = self.config['targetThreshFlag']
 
@@ -358,15 +358,17 @@ class StochAgent(DetermAgent):
         normDist = np.linalg.norm(distance, ord=2)
         done = False
 
+
         # rewards for achieving smaller distance
         if self.minDistSoFar > (normDist + 1):
-            reward += (self.minDistSoFar - normDist) /rewardScale
+        #    reward += (self.minDistSoFar - normDist) /rewardScale
             self.minDistSoFar = normDist
 
         if self.is_terminal(distance):
-            reward += 40.0 / rewardScale
+            reward = 40.0 / rewardScale
             done = True
         else:
+
             #reward -= 0.1 # penality for slowness
             done = False
 
@@ -398,31 +400,35 @@ class StochAgent(DetermAgent):
 
     def reset_helper(self):
 
-        if self.config['dynamicInitialStateFlag']:
+
+        # set target information
+        if self.config['dynamicTargetFlag']:
             while True:
-                index = random.randint(0, self.mapMat.size - 1)
-                col = index % self.mapMat.shape[1]
-                row = index % self.mapMat.shape[0]
+                col = random.randint(0, self.mapMat.shape[1] - 1)
+                row = random.randint(0, self.mapMat.shape[0] - 1)
                 if self.mapMat[row, col] == 0:
                     break
-            # set initial state
-            self.currentState = np.array([row, col, random.random()*2*math.pi], dtype=np.float32)
+            self.targetState = np.array([row, col], dtype=np.int32)
+
+
 
         targetThresh = float('inf')
         if self.targetThreshFlag:
             targetThresh = self.thresh_by_episode(self.epiCount) * max(self.mapMat.shape)
 
-        # set target information
-        if self.config['dynamicTargetFlag']:
+
+        if self.config['dynamicInitialStateFlag']:
             while True:
-                index = random.randint(0, self.mapMat.size - 1)
-                col = index % self.mapMat.shape[1]
-                row = index % self.mapMat.shape[0]
-                distanctVec = np.array([row, col], dtype=np.float32) - self.currentState[0:2]
+
+                col = random.randint(0, self.mapMat.shape[1] - 1)
+                row = random.randint(0, self.mapMat.shape[0] - 1)
+                distanctVec = np.array([row, col], dtype=np.float32) - self.targetState
                 distance = np.linalg.norm(distanctVec, ord=np.inf)
                 if self.mapMat[row, col] == 0 and distance < targetThresh and not self.is_terminal(distanctVec):
                     break
-            self.targetState = np.array([row, col], dtype=np.int32)
+            # set initial state
+            self.currentState = np.array([row, col, random.random()*2*math.pi], dtype=np.float32)
+
 
     def reset(self):
         self.stepCount = 0
