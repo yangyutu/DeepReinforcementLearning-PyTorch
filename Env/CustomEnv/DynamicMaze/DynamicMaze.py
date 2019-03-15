@@ -183,7 +183,7 @@ class StochAgent(DetermAgent):
         self.nbActions = 2 # on and off
 
         self.Dr = 0.161
-        self.Dt = 2.145e-13
+        self.Dt = 2.145e-14
         self.tau = 1 / self.Dr  # tau about 6.211180124223603
         self.a = 1e-6
         self.Tc = 0.1 * self.tau # Tc is control interval
@@ -210,8 +210,6 @@ class StochAgent(DetermAgent):
         if 'distance_thresh_decay' in self.config:
             self.distanceThreshDecay = self.config['distance_thresh_decay']
 
-        self.thresh_by_episode = lambda step: self.endThresh + (
-                self.startThresh - self.endThresh) * math.exp(-1. * step / self.distanceThreshDecay)
 
         self.targetThreshFlag = False
         if 'targetThreshFlag' in self.config:
@@ -222,7 +220,6 @@ class StochAgent(DetermAgent):
             self.scaleFactor = self.config['scaleFactor']
 
         self.targetClipLength = 2*self.receptHalfWidth
-        self.targetClipMap = lambda x: min(x, self.targetClipLength)
 
         self.stochMoveFlag = False
         if 'stochMoveFlag' in self.config:
@@ -231,6 +228,13 @@ class StochAgent(DetermAgent):
         self.randomSeed = seed
         np.random.seed(self.randomSeed)
         random.seed(self.randomSeed)
+
+    def thresh_by_episode(self, step):
+        return self.endThresh + (
+                self.startThresh - self.endThresh) * math.exp(-1. * step / self.distanceThreshDecay)
+
+    def targetClipMap(self, x):
+        return min(x, self.targetClipLength)
 
     def getSensorInfo(self):
     # sensor information needs to consider orientation information
@@ -327,7 +331,7 @@ class StochAgent(DetermAgent):
         else:
             jm = np.array([0.0, 0.0, jmRaw[2]], dtype=np.float32)
             # penality to hit wall
-            reward -= 5 / rewardScale
+     #       reward -= 5 / rewardScale
 
         #print(action)
         #print(jm)

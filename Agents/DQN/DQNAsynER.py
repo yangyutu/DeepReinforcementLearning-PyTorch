@@ -32,7 +32,7 @@ class DQNAsynERWorker(mp.Process):
         self.netLossFunc = netLossFunc
         self.numAction = nbAction
         self.stateProcessor = stateProcessor
-        self.device = 'cpu'
+
         self.epIdx = 0
         self.totalStep = 0
         self.updateGlobalFrequency = 10
@@ -79,9 +79,6 @@ class DQNAsynERWorker(mp.Process):
         if 'epsilon_decay' in self.config:
             self.epsilon_decay = self.config['epsilon_decay']
 
-        self.epsilon_by_episode = lambda step: self.epsilon_final + (
-                self.epsilon_start - self.epsilon_final) * math.exp(-1. * step / self.epsilon_decay)
-
         self.netUpdateOption = 'targetNet'
         if 'netUpdateOption' in self.config:
             self.netUpdateOption = self.config['netUpdateOption']
@@ -104,6 +101,17 @@ class DQNAsynERWorker(mp.Process):
 
         self.lock = lock
 
+        self.device = 'cpu'
+        if 'device' in self.config and torch.cuda.is_available():
+            self.device = self.config['device']
+            torch.cuda.manual_seed(self.randomSeed)
+            self.localNet = self.localNet.cuda()
+
+    def epsilon_by_episode(self, step):
+        return self.epsilon_final + (
+                self.epsilon_start - self.epsilon_final) * math.exp(-1. * step / self.epsilon_decay)
+
+
     def select_action(self, net, state, epsThreshold):
 
         # get a random number so that we can do epsilon exploration
@@ -117,6 +125,7 @@ class DQNAsynERWorker(mp.Process):
                     QValues = net(state)
                 else:
                     QValues = net(torchvector(state[np.newaxis, :]).to(self.device))
+                # item will bring action to cpu
                 action = torch.argmax(QValues).item()
         else:
             action = random.randint(0, self.numAction-1)
@@ -274,7 +283,7 @@ class DQNAsynERWorker(mp.Process):
                 nonFinalNextState, nonFinalMask = self.stateProcessor(transitions.next_state, self.device)
             else:
                 state = torch.tensor(transitions.state, device=self.device, dtype=torch.float32)
-                nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)),
+                nonFinalMask = torch.tensor([s is not None for s in transitions.next_state],
                                             device=self.device, dtype=torch.uint8)
                 nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None],
                                                  device=self.device, dtype=torch.float32)
@@ -348,7 +357,10 @@ class DQNAsynERWorker(mp.Process):
                 self.globalOptimizer.zero_grad()
 
                 for lp, gp in zip(self.localNet.parameters(), self.globalPolicyNet.parameters()):
-                    gp._grad = lp._grad
+                    if self.device == 'cpu':
+                        gp._grad = lp._grad
+                    else:
+                        gp._grad = lp._grad.cpu()
 
                 if self.netGradClip is not None:
                     torch.nn.utils.clip_grad_norm_(self.globalPolicyNet.parameters(), self.netGradClip)
@@ -401,6 +413,7 @@ class DQNAsynERMaster(DQNAgent):
         self.globalTargetNet = targetNet
         self.globalPolicyNet.share_memory()
         self.globalTargetNet.share_memory()
+#        self.optimizer.share_memory()
 
         self.env = env[0]
         self.envs = env
@@ -416,7 +429,10 @@ class DQNAsynERMaster(DQNAgent):
         if 'synchLock' in self.config:
             self.synchLock = self.config['synchLock']
 
-
+        # if device is GPU, then move to GPU
+        if self.device == 'cuda':
+            self.globalPolicyNet.cuda()
+            self.globalTargetNet.cuda()
 
 
         self.construct_workers()

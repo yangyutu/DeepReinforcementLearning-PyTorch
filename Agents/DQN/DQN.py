@@ -310,6 +310,10 @@ class DQNAgent(BaseDQNAgent):
                 if done:
                     print("done in step count: {}".format(stepCount))
                     break
+
+                if stepCount > self.episodeLength:
+                    break
+
                 stepCount += 1
             print("reward sum = " + str(rewardSum))
 
