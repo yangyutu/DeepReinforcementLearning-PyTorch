@@ -16,7 +16,7 @@ import os
 
 torch.manual_seed(1)
 import torch.nn.functional as F
-torch.set_num_threads(1)
+#torch.set_num_threads(1)
 
 configName = 'config.json'
 with open(configName,'r') as f:
