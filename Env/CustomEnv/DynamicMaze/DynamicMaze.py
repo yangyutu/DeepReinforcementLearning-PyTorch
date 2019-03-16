@@ -560,3 +560,58 @@ class DynamicMaze:
         for k, v in self.__dict__.items():
             setattr(result, k, deepcopy(v, memo))
         return result
+
+
+class DynamicMazeMultiMap(DynamicMaze):
+    def __init__(self, config, seed=1):
+        self.mapNames = config['multiMapName'].split(",")
+        self.mapProb = config['multiMapProb']
+        super(DynamicMazeMultiMap,self).__init__(config, seed)
+
+
+
+
+
+    def readMaze(self, fileName):
+
+        self.mapMatList = []
+        self.mapShapeList = []
+        for mapName in self.mapNames:
+            mapMat = np.genfromtxt(mapName + '.txt')
+            mapShape = mapMat.shape
+            self.mapMatList.append(mapMat)
+            self.mapShapeList.append(mapShape)
+
+        self.mapMat = self.mapMatList[0]
+        self.mapShape = self.mapShapeList[0]
+        self.numMaps = len(self.mapMatList)
+
+    def reset(self):
+        if self.config['dynamicObsFlag']:
+            self.circObs.reset()
+
+        # randomly chosen a map
+        mapIdx = np.random.choice(self.numMaps, p=self.mapProb)
+        self.agent.mapMat = self.mapMatList[mapIdx]
+        self.agent.obsMap = self.obsMatList[mapIdx]
+
+
+        print("map used:", self.mapNames[mapIdx])
+        return self.agent.reset()
+
+    def initObsMat(self):
+        if self.config['dynamicObsFlag']:
+            raise NotImplementedError
+
+        padW = self.config['obstacleMapPaddingWidth']
+
+        self.obsMatList = []
+        for idx, map in enumerate(self.mapMatList):
+            obsMapSizeOne = map.shape[0] + 2*padW
+            obsMapSizeTwo = map.shape[1] + 2*padW
+            obsMat = np.ones((obsMapSizeOne, obsMapSizeTwo))
+            obsMat[padW:-padW, padW:-padW] = map
+            self.obsMatList.append(obsMat)
+            np.savetxt(self.mapNames[idx]+'obsMap.txt', obsMat, fmt='%d', delimiter='\t')
+
+        self.obsMat = self.obsMatList[0]
