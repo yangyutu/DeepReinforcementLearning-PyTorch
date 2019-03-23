@@ -157,10 +157,6 @@ class DQNAgent(BaseDQNAgent):
                 else:
                     self.memory.push(transition)
 
-
-
-
-
         else:
             # if it is one step
             transition = Transition(state, action, nextState, reward)

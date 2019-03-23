@@ -8,15 +8,23 @@ import matplotlib.pyplot as plt
 
 class StablizerOneD(gym.Env):
 
-    def __init__(self):
+    def __init__(self, config = None, seed = 1):
         super(StablizerOneD, self).__init__()
 
+        self.config = config
         self.stepCount = 0
         self.currentState = 0.0
         self.targetState = 0.0
         self.nbActions = 3
         self.stateDim = 1
         self.endStep = 200
+        self.randomSeed = seed
+
+        # import parameter for vector env
+        self.viewer = None
+        self.steps_beyond_done = None
+
+
     def step_count(self):
         return self.stepCount
 

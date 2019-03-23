@@ -17,42 +17,32 @@ from torch.multiprocessing import current_process
 
 
 
-class DQNAsynERWorker(mp.Process):
+class DQNAsynERWorker(DQNAgent, mp.Process):
     def __init__(self, config, localNet, env, globalNets, globalOptimizer, netLossFunc, nbAction, rank,
                  globalEpisodeCount, globalEpisodeReward, globalRunningAvgReward, resultQueue, logFolder,
                 stateProcessor = None, lock = None):
-        super(DQNAsynERWorker, self).__init__()
-        self.config = config
+
         self.globalPolicyNet = globalNets[0]
         self.globalTargetNet = globalNets[1]
         self.rank = rank
         self.globalOptimizer = globalOptimizer
         self.localNet = localNet
-        self.env = env
-        self.netLossFunc = netLossFunc
-        self.numAction = nbAction
-        self.stateProcessor = stateProcessor
 
-        self.epIdx = 0
+        mp.Process.__init__(self)
+        DQNAgent.__init__(self. config, localNet, None, None, netLossFunc, nbAction, stateProcessor, )
+
+
         self.totalStep = 0
         self.updateGlobalFrequency = 10
         if 'updateGlobalFrequency' in self.config:
             self.updateGlobalFrequency = self.config['updateGlobalFrequency']
 
-        self.gamma = 0.99
-        if 'gamma' in self.config:
-            self.gamma = self.config['gamma']
 
-        self.trainStep = self.config['trainStep']
         self.globalEpisodeCount = globalEpisodeCount
         self.globalEpisodeReward = globalEpisodeReward
         self.globalRunningAvgReward = globalRunningAvgReward
         self.resultQueue = resultQueue
         self.dirName = logFolder
-
-        self.netGradClip = None
-        if 'netGradClip' in self.config:
-            self.netGradClip = self.config['netGradClip']
 
         self.randomSeed = 1 + self.rank
         if 'randomSeed' in self.config:
@@ -66,35 +56,14 @@ class DQNAsynERWorker(mp.Process):
         if 'targetNetUpdateEpisode' in self.config:
             self.targetNetUpdateEpisode = self.config['targetNetUpdateEpisode']
 
-        self.epsThreshold = self.config['epsThreshold']
-
-        self.epsilon_start = self.epsThreshold
-        self.epsilon_final = self.epsThreshold
-        self.epsilon_decay = 1000
-
-        if 'epsilon_start' in self.config:
-            self.epsilon_start = self.config['epsilon_start']
-        if 'epsilon_final' in self.config:
-            self.epsilon_final = self.config['epsilon_final']
-        if 'epsilon_decay' in self.config:
-            self.epsilon_decay = self.config['epsilon_decay']
-
-        self.netUpdateOption = 'targetNet'
-        if 'netUpdateOption' in self.config:
-            self.netUpdateOption = self.config['netUpdateOption']
-
         self.nStepBuffer = []
 
-        self.memoryCapacity = self.config['memoryCapacity']
-        self.trainBatchSize = self.config['trainBatchSize']
+        # only use vanilla replay memory
         self.memory = ReplayMemory(self.memoryCapacity)
 
         self.priorityMemoryOption = False
 
-        self.episodeLength = 500
-        if 'episodeLength' in self.config:
-            self.episodeLength = self.config['episodeLength']
-
+        # use synthetic lock or not
         self.synchLock = False
         if 'synchLock' in self.config:
             self.synchLock = self.config['synchLock']
@@ -110,74 +79,6 @@ class DQNAsynERWorker(mp.Process):
     def epsilon_by_episode(self, step):
         return self.epsilon_final + (
                 self.epsilon_start - self.epsilon_final) * math.exp(-1. * step / self.epsilon_decay)
-
-
-    def select_action(self, net, state, epsThreshold):
-
-        # get a random number so that we can do epsilon exploration
-        randNum = random.random()
-        if randNum > epsThreshold:
-            with torch.no_grad():
-                # self.policyNet(torch.from_numpy(state.astype(np.float32)).unsqueeze(0))
-                # here state[np.newaxis,:] is to add a batch dimension
-                if self.stateProcessor is not None:
-                    state, _ = self.stateProcessor([state], self.device)
-                    QValues = net(state)
-                else:
-                    QValues = net(torchvector(state[np.newaxis, :]).to(self.device))
-                # item will bring action to cpu
-                action = torch.argmax(QValues).item()
-        else:
-            action = random.randint(0, self.numAction-1)
-        return action
-
-
-    def store_experience(self, state, action, nextState, reward):
-        # caution: using multiple step forward return can increase variance
-        if self.nStepForward > 1:
-
-            # if this is final state, we want to do additional backup to increase useful learning experience
-            if nextState is None:
-                transitions = []
-                transitions.append(Transition(state, action, nextState, reward))
-                R = reward
-                while len(self.nStepBuffer) > 0:
-                    state, action, next_state, reward_old = self.nStepBuffer.pop(0)
-                    R = reward_old + self.gamma * R
-                    transNew = Transition(state, action, None, R)
-                    transitions.append(transNew)
-                for tran in transitions:
-                    if self.priorityMemoryOption:
-                        self.memory.store(tran)
-                    else:
-                        self.memory.push(tran)
-
-            else:
-                # otherwise we calculate normal n step return
-                self.nStepBuffer.append((state, action, nextState, reward))
-
-                if len(self.nStepBuffer) < self.nStepForward:
-                    return
-
-                R = sum([self.nStepBuffer[i][3]*(self.gamma**i) for i in range(self.nStepForward)])
-
-                state, action, _, _ = self.nStepBuffer.pop(0)
-
-                transition = Transition(state, action, nextState, R)
-
-                if self.priorityMemoryOption:
-                    self.memory.store(transition)
-                else:
-                    self.memory.push(transition)
-
-        else:
-            # if it is one step
-            transition = Transition(state, action, nextState, reward)
-
-            if self.priorityMemoryOption:
-                self.memory.store(transition)
-            else:
-                self.memory.push(transition)
 
 
     def run(self):
