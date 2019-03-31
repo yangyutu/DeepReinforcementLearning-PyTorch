@@ -21,7 +21,14 @@ def xavier_init(m):
         m.weight.data.uniform_(-w_bound, w_bound)
         m.bias.data.fill_(0)
 
-
+    if type(m) in [nn.GRU, nn.LSTM, nn.RNN]:
+        for name, param in m.named_parameters():
+            if 'weight_ih' in name:
+                torch.nn.init.xavier_uniform_(param.data)
+            elif 'weight_hh' in name:
+                torch.nn.init.orthogonal_(param.data)
+            elif 'bias' in name:
+                param.data.fill_(0)
 def norm_col_init(weights, std=1.0):
     x = torch.randn(weights.size())
     x *= std / torch.sqrt((x**2).sum(1, keepdim=True))

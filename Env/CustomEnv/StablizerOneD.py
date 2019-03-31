@@ -23,20 +23,27 @@ class StablizerOneD(gym.Env):
         # import parameter for vector env
         self.viewer = None
         self.steps_beyond_done = None
-
+        self.infoDict = {'reset': False, 'endBeforeDone': False, 'stepCount': 0}
 
     def step_count(self):
         return self.stepCount
 
     def step(self, action):
+        if self.stepCount == 0:
+            self.infoDict['reset'] = True
+        else:
+            self.infoDict['reset'] = False
+
+        self.infoDict['endBeforeDone'] = False
         self.stepCount += 1
+        self.infoDict['stepCount'] = self.stepCount
         self.currentState += (random.random()-0.5)*0.4
         if action == 1: # move to positive
             self.currentState += 0.1
         if action == 2: # move to negative
             self.currentState -= 0.1
 
-        if abs(self.currentState) < 1:
+        if abs(self.currentState) < 2:
             reward = - abs(self.currentState)
             done = False
         else:
@@ -45,15 +52,17 @@ class StablizerOneD(gym.Env):
 
         if self.stepCount > self.endStep:
             done = True
+            self.infoDict['endBeforeDone'] = True
 
 
-        return np.array([self.currentState]), reward, done, {}
+        return np.array([self.currentState]), reward, done, self.infoDict.copy()
 
     def reset(self):
-
+        #self.infoDict['reset'] = True
+        self.infoDict['stepCount'] = 0
         self.stepCount = 0
         self.currentState = (random.random() - 0.5)-0.1
-
+        self.currentState = 0.514
         return np.array([self.currentState])
 
 
@@ -78,6 +87,4 @@ class StablizerOneD(gym.Env):
         for k, v in self.__dict__.items():
             setattr(result, k, deepcopy(v, memo))
         return result
-
-
 

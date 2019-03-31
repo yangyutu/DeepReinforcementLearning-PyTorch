@@ -24,9 +24,10 @@ class DQNAgent(BaseDQNAgent):
     def __init__(self, config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None):
         super(DQNAgent, self).__init__(config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor)
 
+        self.init_memory()
 
 
-
+    def init_memory(self):
 
         if self.priorityMemoryOption:
             self.memory = PrioritizedReplayMemory(self.memoryCapacity, self.config)
@@ -52,7 +53,9 @@ class DQNAgent(BaseDQNAgent):
             if self.memoryOption == 'reward':
                 self.nStepForward = 1
 
-
+    def work_At_Episode_Begin(self):
+        # clear the nstep buffer
+        self.nStepBuffer.clear()
 
     def train(self):
 
@@ -67,8 +70,7 @@ class DQNAgent(BaseDQNAgent):
             done = False
             rewardSum = 0
 
-            # clear the nstep buffer
-            self.nStepBuffer.clear()
+            self.work_At_Episode_Begin()
 
             for stepCount in range(self.episodeLength):
                 self.epsThreshold = self.epsilon_by_step(self.globalStepCount)
@@ -85,7 +87,7 @@ class DQNAgent(BaseDQNAgent):
                     nextState = None
 
                 # learn the transition
-                self.update_net(state, action, nextState, reward)
+                self.update_net(state, action, nextState, reward, info)
 
                 state = nextState
                 rewardSum += reward * pow(self.gamma, stepCount)
@@ -118,7 +120,7 @@ class DQNAgent(BaseDQNAgent):
             self.epIdx += 1
         self.save_all()
 
-    def store_experience(self, state, action, nextState, reward):
+    def store_experience(self, state, action, nextState, reward, info):
 
         # caution: using multiple step forward return can increase variance
         if self.nStepForward > 1:
@@ -169,11 +171,11 @@ class DQNAgent(BaseDQNAgent):
 
 
 
-    def update_net(self, state, action, nextState, reward):
+    def update_net(self, state, action, nextState, reward, info):
 
         # first store memory
 
-        self.store_experience(state, action, nextState, reward)
+        self.store_experience(state, action, nextState, reward, info)
 
         if self.priorityMemoryOption:
             if len(self.memory) < self.config['memoryCapacity']:

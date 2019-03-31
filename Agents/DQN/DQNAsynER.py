@@ -1,15 +1,8 @@
 from Agents.DQN.DQN import DQNAgent
 from copy import deepcopy
-from Agents.Core.Agent import Agent
 from Agents.Core.ReplayMemory import ReplayMemory, Transition
-from Agents.Core.PrioritizedReplayMemory import PrioritizedReplayMemory
-from utils.utils import torchvector
-import random
 import torch
 import torch.optim
-import numpy as np
-import simplejson as json
-import os
 import math
 import torch.multiprocessing as mp
 from torch.multiprocessing import current_process

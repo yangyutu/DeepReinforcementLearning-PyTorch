@@ -6,17 +6,18 @@ import random
 from copy import deepcopy
 import matplotlib.pyplot as plt
 
-class SpeedStablizerOneD(gym.Env):
+class SpeedStablizerTwoStepOneD(gym.Env):
 
     def __init__(self):
-        super(SpeedStablizerOneD, self).__init__()
+        super(SpeedStablizerTwoStepOneD, self).__init__()
 
         self.stepCount = 0
         self.currentSpeed = 0.0
         self.currentPosition = 0.0
+        self.previousPosition = 0.0
         self.targetSpeed = 2.0
         self.nbActions = 3
-        self.stateDim = 1
+        self.stateDim = 2
         self.endStep = 200
     def step_count(self):
         return self.stepCount
@@ -46,18 +47,18 @@ class SpeedStablizerOneD(gym.Env):
 
     #    if self.stepCount > self.endStep:
     #        done = True
-
+        self.previousPosition = self.currentPosition
         self.currentPosition += self.currentSpeed
 
-        return np.array([self.currentPosition]), reward, done, {}
+        return np.array([self.previousPosition, self.currentPosition]), reward, done, {}
 
     def reset(self):
 
         self.stepCount = 0
         self.currentSpeed = (random.random()-0.5)
         self.currentPosition = 0.0
-
-        return np.array([self.currentPosition])
+        self.previousPosition = 0.0
+        return np.array([self.previousPosition, self.currentPosition])
 
 
     def close(self):

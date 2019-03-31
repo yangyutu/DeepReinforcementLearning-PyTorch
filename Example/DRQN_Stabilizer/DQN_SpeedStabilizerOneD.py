@@ -3,6 +3,8 @@
 from Agents.DQN.DQN import DQNAgent
 from Agents.Core.MLPNet import MultiLayerNetRegression
 from Agents.Core.ReplayMemory import ReplayMemory, Transition
+from Env.CustomEnv.SpeedStablizerOneD import SpeedStablizerOneD
+from Env.CustomEnv.SpeedStablizerTwoStepOneD import SpeedStablizerTwoStepOneD
 
 import json
 from torch import optim
@@ -25,23 +27,23 @@ def plotPolicy(x, policy):
 # first construct the neutral network
 config = dict()
 
-config['trainStep'] = 100
+config['trainStep'] = 5000
 config['epsThreshold'] = 0.1
 config['targetNetUpdateStep'] = 100
-config['memoryCapacity'] = 200
-config['trainBatchSize'] = 32
-config['gamma'] = 0.9
+config['memoryCapacity'] = 20000
+config['trainBatchSize'] = 64
+config['gamma'] = 0.99
 config['learningRate'] = 0.001
 config['netGradClip'] = 1
 config['logFlag'] = True
 config['logFileName'] = 'StabilizerOneDLog/traj'
-config['logFrequency'] = 100
+config['logFrequency'] = 1000
 config['priorityMemoryOption'] = False
 config['netUpdateOption'] = 'doubleQ'
 config['netUpdateFrequency'] = 1
 config['priorityMemory_absErrUpper'] = 5
 
-env = StablizerOneD()
+env = SpeedStablizerTwoStepOneD()
 N_S = env.stateDim
 N_A = env.nbActions
 
@@ -61,18 +63,16 @@ optimizer = optim.Adam(policyNet.parameters(), lr=config['learningRate'])
 
 agent = DQNAgent(config, policyNet, targetNet, env, optimizer, torch.nn.MSELoss(reduction='none'), N_A)
 
-xSet = np.linspace(-1,1,100)
-policy = np.zeros_like(xSet)
-for i, x in enumerate(xSet):
-    policy[i] = agent.getPolicy(np.array([x]))
+#xSet = np.linspace(-1,1,100)
+#policy = np.zeros_like(xSet)
+#for i, x in enumerate(xSet):
+#    policy[i] = agent.getPolicy(np.array([x]))
 
-np.savetxt('StabilizerPolicyBeforeTrain.txt', policy, fmt='%d')
+#np.savetxt('StabilizerPolicyBeforeTrain.txt', policy, fmt='%d')
 
-#agent.perform_random_exploration(10)
+
 agent.train()
-#storeMemory = ReplayMemory(100000)
-agent.testPolicyNet(100)
-#storeMemory.write_to_text('testPolicyMemory.txt')
+
 
 
 def customPolicy(state):
@@ -91,12 +91,12 @@ def customPolicy(state):
 # agent.perform_on_policy(100, customPolicy, storeMemory)
 # storeMemory.write_to_text('performPolicyMemory.txt')
 # transitions = storeMemory.fetch_all_random()
-for i, x in enumerate(xSet):
-    policy[i] = agent.getPolicy(np.array([x]))
+#for i, x in enumerate(xSet):
+#    policy[i] = agent.getPolicy(np.array([x]))
 
 
-np.savetxt('StabilizerPolicyAfterTrain.txt', policy, fmt='%d')
+#np.savetxt('StabilizerPolicyAfterTrain.txt', policy, fmt='%d')
 
-plotPolicy(xSet, policy)
+#plotPolicy(xSet, policy)
 
 
