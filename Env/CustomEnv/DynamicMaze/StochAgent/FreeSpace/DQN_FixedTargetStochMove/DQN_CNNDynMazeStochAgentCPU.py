@@ -139,8 +139,9 @@ if trainFlag:
                           dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
                           dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
                           angle = math.atan2(dy, dx)
-                          dx = agent.env.agent.targetClipLength * math.cos(angle)
-                          dy = agent.env.agent.targetClipLength * math.sin(angle)
+                          if math.sqrt(dx ** 2 + dy ** 2) > agent.env.agent.targetClipLength:
+                              dx = agent.env.agent.targetClipLength * math.cos(angle)
+                              dy = agent.env.agent.targetClipLength * math.sin(angle)
                           #dx = agent.env.agent.targetClipMap(dx) if dx > 0 else -agent.env.agent.targetClipMap(-dx)
                           #dy = agent.env.agent.targetClipMap(dy) if dy > 0 else -agent.env.agent.targetClipMap(-dy)
                           state = {'sensor': sensorInfo, 'target': np.array([dx, dy])}
@@ -171,8 +172,9 @@ if trainFlag:
                         dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
                         dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
                         angle = math.atan2(dy, dx)
-                        dx = agent.env.agent.targetClipLength * math.cos(angle)
-                        dy = agent.env.agent.targetClipLength * math.sin(angle)
+                        if math.sqrt(dx ** 2 + dy ** 2) > agent.env.agent.targetClipLength:
+                            dx = agent.env.agent.targetClipLength * math.cos(angle)
+                            dy = agent.env.agent.targetClipLength * math.sin(angle)
 
                         #dx = agent.env.agent.targetClipMap(dx) if dx > 0 else -agent.env.agent.targetClipMap(-dx)
                         #dy = agent.env.agent.targetClipMap(dy) if dy > 0 else -agent.env.agent.targetClipMap(-dy)
