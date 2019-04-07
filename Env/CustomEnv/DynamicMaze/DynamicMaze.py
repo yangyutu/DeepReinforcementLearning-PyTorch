@@ -390,8 +390,12 @@ class StochAgent(DetermAgent):
         dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
         dy = - distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
 
-        dx = self.targetClipMap(dx) if dx > 0 else -self.targetClipMap(-dx)
-        dy = self.targetClipMap(dy) if dy > 0 else -self.targetClipMap(-dy)
+        #dx = self.targetClipMap(dx) if dx > 0 else -self.targetClipMap(-dx)
+        #dy = self.targetClipMap(dy) if dy > 0 else -self.targetClipMap(-dy)
+
+        angle = math.atan2(dy, dx)
+        dx = self.targetClipLength * math.cos(angle)
+        dy = self.targetClipLength * math.sin(angle)
 
         info = {'currentState': np.array(self.currentState),
                 'targetState': np.array(self.targetState)}
@@ -457,8 +461,11 @@ class StochAgent(DetermAgent):
         dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
         dy = - distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
 
-        dx = self.targetClipMap(dx) if dx > 0 else -self.targetClipMap(-dx)
-        dy = self.targetClipMap(dy) if dy > 0 else -self.targetClipMap(-dy)
+        #dx = self.targetClipMap(dx) if dx > 0 else -self.targetClipMap(-dx)
+        #dy = self.targetClipMap(dy) if dy > 0 else -self.targetClipMap(-dy)
+        angle = math.atan2(dy, dx)
+        dx = self.targetClipLength * math.cos(angle)
+        dy = self.targetClipLength * math.sin(angle)
 
 
         #angleDistance = math.atan2(distance[1], distance[0]) - self.currentState[2]

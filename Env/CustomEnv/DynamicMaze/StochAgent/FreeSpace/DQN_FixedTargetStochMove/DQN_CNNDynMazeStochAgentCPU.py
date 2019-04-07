@@ -138,8 +138,11 @@ if trainFlag:
                           distance = np.array(config['targetState']) - np.array([i, j])
                           dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
                           dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
-                          dx = agent.env.agent.targetClipMap(dx) if dx > 0 else -agent.env.agent.targetClipMap(-dx)
-                          dy = agent.env.agent.targetClipMap(dy) if dy > 0 else -agent.env.agent.targetClipMap(-dy)
+                          angle = math.atan2(dy, dx)
+                          dx = agent.env.agent.targetClipLength * math.cos(angle)
+                          dy = agent.env.agent.targetClipLength * math.sin(angle)
+                          #dx = agent.env.agent.targetClipMap(dx) if dx > 0 else -agent.env.agent.targetClipMap(-dx)
+                          #dy = agent.env.agent.targetClipMap(dy) if dy > 0 else -agent.env.agent.targetClipMap(-dy)
                           state = {'sensor': sensorInfo, 'target': np.array([dx, dy])}
                           policy[i, j] = agent.getPolicy(state)
                           Qvalue = agent.policyNet(stateProcessor([state], config['device'])[0])
@@ -167,8 +170,12 @@ if trainFlag:
                         distance = np.array(config['targetState']) - np.array([i, j])
                         dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
                         dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
-                        dx = agent.env.agent.targetClipMap(dx) if dx > 0 else -agent.env.agent.targetClipMap(-dx)
-                        dy = agent.env.agent.targetClipMap(dy) if dy > 0 else -agent.env.agent.targetClipMap(-dy)
+                        angle = math.atan2(dy, dx)
+                        dx = agent.env.agent.targetClipLength * math.cos(angle)
+                        dy = agent.env.agent.targetClipLength * math.sin(angle)
+
+                        #dx = agent.env.agent.targetClipMap(dx) if dx > 0 else -agent.env.agent.targetClipMap(-dx)
+                        #dy = agent.env.agent.targetClipMap(dy) if dy > 0 else -agent.env.agent.targetClipMap(-dy)
                         state = {'sensor': sensorInfo, 'target': np.array([dx, dy])}
                         policy[i, j] = agent.getPolicy(state)
                         Qvalue = agent.policyNet(stateProcessor([state], config['device'])[0])
