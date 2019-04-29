@@ -177,6 +177,12 @@ class DQNAgent(BaseDQNAgent):
 
         self.store_experience(state, action, nextState, reward, info)
 
+        if self.hindSightER and nextState is not None and self.globalStepCount%self.hindSightERFreq:
+            stateNew, actionNew, nextStateNew, rewardNew = self.env.getHindSightExperience(state, action, nextState, info)
+            if stateNew is not None:
+                self.store_experience(stateNew, actionNew, nextStateNew, rewardNew, info)
+
+
         if self.priorityMemoryOption:
             if len(self.memory) < self.config['memoryCapacity']:
                 return

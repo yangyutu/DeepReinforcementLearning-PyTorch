@@ -104,6 +104,11 @@ class BaseDQNAgent(object):
 
         random.seed(self.randomSeed)
 
+        self.hindSightER = False
+        if 'hindSightER' in self.config:
+            self.hindSightER = self.config['hindSightER']
+            self.hindSightERFreq = self.config['hindSightERFreq']
+
     def select_action(self, net, state, epsThreshold):
 
         # get a random number so that we can do epsilon exploration

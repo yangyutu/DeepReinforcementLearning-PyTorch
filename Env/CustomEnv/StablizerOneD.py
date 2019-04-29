@@ -88,3 +88,83 @@ class StablizerOneD(gym.Env):
             setattr(result, k, deepcopy(v, memo))
         return result
 
+class StablizerOneDContinuous(gym.Env):
+
+    def __init__(self, config = None, seed = 1):
+        super(StablizerOneDContinuous, self).__init__()
+
+        self.config = config
+        self.stepCount = 0
+        self.currentState = 0.0
+        self.targetState = 0.0
+        self.nbActions = 1
+        self.stateDim = 1
+        self.endStep = 200
+        self.randomSeed = seed
+
+        # import parameter for vector env
+        self.viewer = None
+        self.steps_beyond_done = None
+        self.infoDict = {'reset': False, 'endBeforeDone': False, 'stepCount': 0}
+
+    def step_count(self):
+        return self.stepCount
+
+    def step(self, action):
+        self.stepCount += 1
+        self.infoDict['stepCount'] = self.stepCount
+        self.currentState[0] += (random.random()-0.5)*0.1
+
+        # action is the movement amount
+        self.currentState += action
+        reward = 0.0
+        done = False
+        if abs(self.currentState) < 0.5:
+            reward = 1
+            done = True
+            self.infoDict['done_state'] = self.currentState.copy()
+
+        if abs(self.currentState) > 5:
+            reward = -1
+
+        # if abs(self.currentState) < 5:
+        #     reward = - abs(self.currentState[0])
+        #     done = False
+        # else:
+        #     reward = - abs(self.currentState[0]) * (self.endStep - self.stepCount)
+        #     done = True
+        #     self.infoDict['done_state'] = self.currentState
+
+
+        return self.currentState.copy(), reward, done, self.infoDict.copy()
+
+    def reset(self):
+        #self.infoDict['reset'] = True
+        self.infoDict['stepCount'] = 0
+        self.stepCount = 0
+        self.currentState = np.array([(random.random() - 0.5)*10], dtype=np.float)
+        self.infoDict['initial state'] = self.currentState.copy()
+        return self.currentState
+
+
+    def close(self):
+        pass
+
+    def seed(self):
+        pass
+
+    def render(self, mode='human'):
+        pass
+
+    def render_traj(self, stateSet, ax):
+        ax.plot(np.array(stateSet)[:])
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+#the memo dict, where id-to-object correspondence is kept to reconstruct
+#complex object graphs perfectly
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result

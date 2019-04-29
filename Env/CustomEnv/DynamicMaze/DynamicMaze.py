@@ -225,6 +225,11 @@ class StochAgent(DetermAgent):
         if 'stochMoveFlag' in self.config:
             self.stochMoveFlag = self.config['stochMoveFlag']
 
+        self.hindSightER = False
+        if 'hindSightER' in self.config:
+            self.hindSightER = self.config['hindSightER']
+        self.hindSightInfo = {}
+
         self.randomSeed = seed
         np.random.seed(self.randomSeed)
         random.seed(self.randomSeed)
@@ -275,6 +280,28 @@ class StochAgent(DetermAgent):
         # use augumented obstacle matrix to check collision
         return np.expand_dims(sensorInfoMat, axis = 0)
 
+    def getHindSightExperience(self, state, action, nextState, info):
+
+        if self.hindSightInfo['obsFlag']:
+            return None, None, None, None
+        else:
+            targetNew = self.hindSightInfo['currentState'][0:2]
+
+            distance = targetNew - self.hindSightInfo['previousState'][0:2]
+            phi = self.hindSightInfo['previousState'][2]
+
+            sensorInfoMat = self.getSensorInfoFromPos(self.hindSightInfo['previousState'])
+
+            # distance will be changed from lab coordinate to local coordinate
+            dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
+            dy = - distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
+
+            combinedState = {'sensor': sensorInfoMat,
+                             'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor])}
+
+            actionNew = action
+            rewardNew = 40.0 / self.rewardScale
+            return combinedState, actionNew, None, rewardNew
 
     def constructSensorArrayIndex(self):
         x_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
@@ -292,9 +319,9 @@ class StochAgent(DetermAgent):
 
 
     def step(self, action):
-
+        self.hindSightInfo['previousState'] = self.currentState.copy()
         reward = 0.0
-        rewardScale = 40.0
+        self.rewardScale = 40.0
         if action == 1:
             # enforce deterministic
             if not self.stochMoveFlag:
@@ -327,9 +354,10 @@ class StochAgent(DetermAgent):
         j = math.floor(self.currentState[1] + dy + 0.5) + self.padding
         if self.obsMap[i, j] == 0:
             jm = np.array([dx, dy, jmRaw[2]], dtype=np.float32)
-
+            self.hindSightInfo['obsFlag'] = False
         else:
             jm = np.array([0.0, 0.0, jmRaw[2]], dtype=np.float32)
+            self.hindSightInfo['obsFlag'] = True
             # penality to hit wall
      #       reward -= 5 / rewardScale
 
@@ -339,7 +367,7 @@ class StochAgent(DetermAgent):
         self.currentState += jm
         # make sure orientation within 0 to 2pi
         self.currentState[2] = (self.currentState[2] + 2 * np.pi) % (2 * np.pi)
-
+        self.hindSightInfo['currentState'] = self.currentState.copy()
         #if action == 0:
             # angle phi will update randomly
         #    self.currentState[2] += random.gauss(0, self.angleStd)
@@ -369,7 +397,7 @@ class StochAgent(DetermAgent):
             self.minDistSoFar = normDist
 
         if self.is_terminal(distance):
-            reward = 40.0 / rewardScale
+            reward = 40.0 / self.rewardScale
             done = True
         else:
 
@@ -441,7 +469,7 @@ class StochAgent(DetermAgent):
 
     def reset(self):
         self.stepCount = 0
-
+        self.hindSightInfo = {}
         self.epiCount += 1
         # store random jump for this episode
         randomIdx = np.random.choice(self.jumpMat.shape[0], self.endStep + 10)
@@ -545,6 +573,9 @@ class DynamicMaze:
         if self.config['dynamicObsFlag']:
             self.circObs.reset()
         return self.agent.reset()
+
+    def getHindSightExperience(self, state, action, nextState, info):
+        return self.agent.getHindSightExperience(state, action, nextState, info)
 
     def initObsMat(self):
         if self.config['dynamicObsFlag']:
