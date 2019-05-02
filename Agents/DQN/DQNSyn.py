@@ -29,6 +29,12 @@ class DQNSynAgent(DQNAgent):
     def read_config(self):
         super(DQNSynAgent, self).read_config()
         self.numWorkers = self.config['numWorkers']
+        self.successRepeat = False
+        if 'successRepeat' in self.config:
+            self.successRepeat = self.config['successRepeat']
+        self.successRepeatTime = 1
+        if 'successRepeatTime' in self.config:
+            self.successRepeatTime = self.config['successRepeatTime']
 
     def select_action(self, net, states, epsThreshold):
 
@@ -123,8 +129,12 @@ class DQNSynAgent(DQNAgent):
     def store_experience(self, states, actions, nextStates, rewards, infos):
 
         for i in range(len(states)):
-            # if it is ended due to stepLimit, we should not store the experience
+            # if it is ended due to stepLimit, we should not store the experience due to the vec env setup
             if not infos[i]['endBeforeDone']:
                 transition = Transition(states[i], actions[i], nextStates[i], rewards[i])
                 self.memory.push(transition)
+                if self.successRepeat and nextStates[i] is None:
+                    for _ in range(self.successRepeatTime):
+                        self.memory.push(transition)
+
 

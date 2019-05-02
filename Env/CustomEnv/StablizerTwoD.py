@@ -165,13 +165,15 @@ class StablizerTwoDContinuousSP(gym.Env):
     def step(self, action):
         self.stepCount += 1
         self.infoDict['stepCount'] = self.stepCount
-        #self.currentState += np.random.randn(2)*0.1
+        #
         self.infoDict['previousState'] = self.currentState.copy()
 
         # action is the movement amount
         phi = self.currentState[2]
         self.currentState[0] += action * math.cos(phi) * 1
         self.currentState[1] += action * math.sin(phi) * 1
+
+        self.currentState[0:2] += np.random.randn(2) * 0.1
 
         self.currentState[2] += random.gauss(0, self.angleStd)
         self.currentState[2] = (self.currentState[2] + 2 * np.pi) % (2 * np.pi)
