@@ -10,7 +10,7 @@ from Env.CustomEnv.DynamicMaze.CircleObs import CircleObs
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-import ghalton
+#import ghalton
 import random
 from copy import deepcopy
 #
@@ -236,6 +236,7 @@ class StochAgent(DetermAgent):
         self.randomSeed = seed
         np.random.seed(self.randomSeed)
         random.seed(self.randomSeed)
+        self.info ={}
 
     def thresh_by_episode(self, step):
         return self.endThresh + (
@@ -429,11 +430,17 @@ class StochAgent(DetermAgent):
             dx = self.targetClipLength * math.cos(angle)
             dy = self.targetClipLength * math.sin(angle)
 
-        info = {'currentState': np.array(self.currentState),
-                'targetState': np.array(self.targetState)}
+        globalTargetX = self.currentState[0] + dx * math.cos(phi) - dy * math.sin(phi)
+        globalTargetY = self.currentState[1] + dx * math.sin(phi) + dy * math.sin(phi)
+
+        self.info['previousTarget'] = self.info['currentTarget'].copy()
+        self.info['currentState'] = self.currentState.copy()
+        self.info['targetState'] = self.targetState.copy()
+        self.info['currentTarget'] = np.array([globalTargetX, globalTargetY])
+
         combinedState = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
                          'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor])}
-        return combinedState, reward, done, info
+        return combinedState, reward, done, self.info.copy()
 
     def is_terminal(self, distance):
         return np.linalg.norm(distance, ord=np.inf) < 2.0
@@ -472,6 +479,7 @@ class StochAgent(DetermAgent):
 
     def reset(self):
         self.stepCount = 0
+        self.info = {}
         self.hindSightInfo = {}
         self.epiCount += 1
         # store random jump for this episode
@@ -499,6 +507,11 @@ class StochAgent(DetermAgent):
         if math.sqrt(dx**2 + dy**2) > self.targetClipLength:
             dx = self.targetClipLength * math.cos(angle)
             dy = self.targetClipLength * math.sin(angle)
+
+        globalTargetX = self.currentState[0]+ dx * math.cos(phi) - dy * math.sin(phi)
+        globalTargetY = self.currentState[1]+ dx * math.sin(phi) + dy * math.sin(phi)
+
+        self.info['currentTarget'] = np.array([globalTargetX, globalTargetY])
 
 
         #angleDistance = math.atan2(distance[1], distance[0]) - self.currentState[2]
@@ -558,8 +571,9 @@ class DynamicMaze:
         N = 800
         margin = 8
         
-        sequencer = ghalton.Halton(2)
-        randSeq = np.array(sequencer.get(N))
+        #sequencer = ghalton.Halton(2)
+
+        randSeq = np.random.random(N,2)
         centerX = (self.mapShape[1] - 2*margin)*randSeq[:,0] + margin
         centerY = (self.mapShape[0] - 2*margin)*randSeq[:,1] + margin
         

@@ -137,7 +137,7 @@ if trainFlag:
                           sensorInfo = env.agent.getSensorInfoFromPos(np.array([i, j, phi]))
                           distance = np.array(config['targetState']) - np.array([i, j])
                           dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
-                          dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
+                          dy = -distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
                           angle = math.atan2(dy, dx)
                           if math.sqrt(dx ** 2 + dy ** 2) > agent.env.agent.targetClipLength:
                               dx = agent.env.agent.targetClipLength * math.cos(angle)
