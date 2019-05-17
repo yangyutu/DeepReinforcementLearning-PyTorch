@@ -120,6 +120,8 @@ if trainFlag:
         checkpoint = torch.load(config['saveModelFile'])
         agent.policyNet.load_state_dict(checkpoint['model_state_dict'])
         agent.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    if config['loadCheckpointFlag']:
+        agent.load_checkpoint(config['loadCheckpointPrefix'])
 
 
     plotPolicyFlag = True

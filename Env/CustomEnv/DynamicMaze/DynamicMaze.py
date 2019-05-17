@@ -230,6 +230,9 @@ class StochAgent(DetermAgent):
             self.hindSightER = self.config['hindSightER']
         self.hindSightInfo = {}
 
+        self.wallPenalty = 0.0
+        if 'wallPenalty' in self.config:
+            self.wallPenalty = self.config['wallPenalty']
         self.randomSeed = seed
         np.random.seed(self.randomSeed)
         random.seed(self.randomSeed)
@@ -359,7 +362,7 @@ class StochAgent(DetermAgent):
             jm = np.array([0.0, 0.0, jmRaw[2]], dtype=np.float32)
             self.hindSightInfo['obsFlag'] = True
             # penality to hit wall
-     #       reward -= 5 / rewardScale
+            reward -= self.wallPenalty / self.rewardScale
 
         #print(action)
         #print(jm)
