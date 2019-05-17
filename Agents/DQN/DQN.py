@@ -21,8 +21,8 @@ class NumpyEncoder(json.JSONEncoder):
 
 class DQNAgent(BaseDQNAgent):
 
-    def __init__(self, config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None):
-        super(DQNAgent, self).__init__(config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor)
+    def __init__(self, config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None, experienceProcessor=None):
+        super(DQNAgent, self).__init__(config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor, experienceProcessor)
 
         self.init_memory()
 
@@ -122,6 +122,8 @@ class DQNAgent(BaseDQNAgent):
 
     def store_experience(self, state, action, nextState, reward, info):
 
+        if self.experienceProcessor is not None:
+            state, action, nextState, reward = self.experienceProcessor(state, action, nextState, reward, info)
         # caution: using multiple step forward return can increase variance
         if self.nStepForward > 1:
 

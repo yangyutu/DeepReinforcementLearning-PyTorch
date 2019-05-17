@@ -9,7 +9,7 @@ import math
 
 class BaseDQNAgent(object):
 
-    def __init__(self, config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None):
+    def __init__(self, config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None, experienceProcessor=None):
         self.config = config
         self.read_config()
         self.policyNet = policyNet
@@ -18,6 +18,7 @@ class BaseDQNAgent(object):
         self.optimizer = optimizer
         self.numAction = nbAction
         self.stateProcessor = stateProcessor
+        self.experienceProcessor = experienceProcessor
         self.netLossFunc = netLossFunc
         self.initialization()
 
