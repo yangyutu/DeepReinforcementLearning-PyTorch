@@ -373,18 +373,18 @@ class StochAgent(DetermAgent):
             # angle phi will update randomly
         #    self.currentState[2] += random.gauss(0, self.angleStd)
 
-        if self.config['dynamicTargetFlag'] and self.stepCount % self.config['targetMoveFreq'] == 0:
-            move = random.randint(0, 3)
-            i = self.targetState[0] + self.padding
-            j = self.targetState[1] + self.padding
-            if move == 0 and self.obsMap[i - 1, j] == 0:
-                self.targetState[0] -= 1
-            if move == 1 and self.obsMap[i + 1, j] == 0:
-                self.targetState[0] += 1
-            if move == 2 and self.obsMap[i, j - 1] == 0:
-                self.targetState[1] -= 1
-            if move == 3 and self.obsMap[i, j + 1] == 0:
-                self.targetState[1] += 1
+        # if self.config['dynamicTargetFlag'] and self.stepCount % self.config['targetMoveFreq'] == 0:
+        #     move = random.randint(0, 3)
+        #     i = self.targetState[0] + self.padding
+        #     j = self.targetState[1] + self.padding
+        #     if move == 0 and self.obsMap[i - 1, j] == 0:
+        #         self.targetState[0] -= 1
+        #     if move == 1 and self.obsMap[i + 1, j] == 0:
+        #         self.targetState[0] += 1
+        #     if move == 2 and self.obsMap[i, j - 1] == 0:
+        #         self.targetState[1] -= 1
+        #     if move == 3 and self.obsMap[i, j + 1] == 0:
+        #         self.targetState[1] += 1
 
         distance = self.targetState - self.currentState[0:2]
 
@@ -427,13 +427,15 @@ class StochAgent(DetermAgent):
             dx = self.targetClipLength * math.cos(angle)
             dy = self.targetClipLength * math.sin(angle)
 
+        # recover the global target position after target mapping
         globalTargetX = self.currentState[0] + dx * math.cos(phi) - dy * math.sin(phi)
-        globalTargetY = self.currentState[1] + dx * math.sin(phi) + dy * math.sin(phi)
+        globalTargetY = self.currentState[1] + dx * math.sin(phi) + dy * math.cos(phi)
 
         self.info['previousTarget'] = self.info['currentTarget'].copy()
         self.info['currentState'] = self.currentState.copy()
         self.info['targetState'] = self.targetState.copy()
         self.info['currentTarget'] = np.array([globalTargetX, globalTargetY])
+        self.info['currentDistance'] = math.sqrt(dx**2 + dy**2)
 
         combinedState = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
                          'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor])}
@@ -506,7 +508,7 @@ class StochAgent(DetermAgent):
             dy = self.targetClipLength * math.sin(angle)
 
         globalTargetX = self.currentState[0]+ dx * math.cos(phi) - dy * math.sin(phi)
-        globalTargetY = self.currentState[1]+ dx * math.sin(phi) + dy * math.sin(phi)
+        globalTargetY = self.currentState[1]+ dx * math.sin(phi) + dy * math.cos(phi)
 
         self.info['currentTarget'] = np.array([globalTargetX, globalTargetY])
 
