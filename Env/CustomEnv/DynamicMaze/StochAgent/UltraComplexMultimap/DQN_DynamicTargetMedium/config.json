@@ -5,7 +5,7 @@
     "JumpMatrix": "../trajSampleHalfSlow.npz",
     "trainStep": 20000,
     "epsThreshold": 0.1,
-    "epsilon_start": 0.3,
+    "epsilon_start": 0.1,
     "epsilon_final": 0.05,
     "epsilon_decay": 50,
     "targetNetUpdateStep": 100,
@@ -41,7 +41,7 @@
     "dynamicInitialStateFlag": true,
     "dynamicTargetFlag": true,
     "targetThreshFlag": true,
-	"target_start_thresh": 0.1,
+	"target_start_thresh": 0.5,
 	"target_end_thresh": 1.0,
 	"distance_thresh_decay": 2000,
     "verbose": false,
@@ -49,5 +49,7 @@
     "stochAgent": true,
     "stochMoveFlag": true,
     "loadExistingModel": false,
-    "saveModelFile": "freeSpaceLargedynamicMazeModel.pt"
+    "saveModelFile": "freeSpaceLargedynamicMazeModel.pt",
+		"loadCheckpointFlag": true,
+		"loadCheckpointPrefix": "Log/Epoch8000"
 }
