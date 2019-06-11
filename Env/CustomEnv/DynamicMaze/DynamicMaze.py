@@ -482,6 +482,7 @@ class StochAgent(DetermAgent):
     def reset(self):
         self.stepCount = 0
         self.info = {}
+        self.info['scaleFactor'] = self.scaleFactor
         self.hindSightInfo = {}
         self.epiCount += 1
         # store random jump for this episode

@@ -79,8 +79,7 @@ class DDPGAgent:
             self.hindSightER = self.config['hindSightER']
             self.hindSightERFreq = self.config['hindSightERFreq']
 
-
-    def initialization(self):
+    def net_to_device(self):
         # move model to correct device
         self.actorNet = self.actorNet.to(self.device)
         self.criticNet = self.criticNet.to(self.device)
@@ -92,6 +91,8 @@ class DDPGAgent:
         if self.criticNet_target is not None:
             self.criticNet_target = self.criticNet_target.to(self.device)
 
+    def initialization(self):
+        self.net_to_device()
         self.dirName = 'Log/'
         if 'dataLogFolder' in self.config:
             self.dirName = self.config['dataLogFolder']
