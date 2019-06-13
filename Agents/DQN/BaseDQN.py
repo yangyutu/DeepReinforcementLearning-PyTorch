@@ -68,7 +68,7 @@ class BaseDQNAgent(object):
         self.nStepForward = 1
         if 'nStepForward' in self.config:
             self.nStepForward = self.config['nStepForward']
-        self.lossRecordStep = 10
+        self.lossRecordStep = 500
         if 'lossRecordStep' in self.config:
             self.lossRecordStep = self.config['lossRecordStep']
         self.episodeLength = 500

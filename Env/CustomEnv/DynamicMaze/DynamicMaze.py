@@ -285,8 +285,8 @@ class StochAgent(DetermAgent):
         return np.expand_dims(sensorInfoMat, axis = 0)
 
     def getHindSightExperience(self, state, action, nextState, info):
-
-        if self.hindSightInfo['obsFlag']:
+        # if hit an obstacle or if action is to keep still
+        if self.hindSightInfo['obsFlag'] or action == 0:
             return None, None, None, None
         else:
             targetNew = self.hindSightInfo['currentState'][0:2]

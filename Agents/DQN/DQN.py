@@ -354,8 +354,8 @@ class DQNAgent(BaseDQNAgent):
         }, prefix + '_checkpoint.pt')
 
     def load_checkpoint(self, prefix):
-        self.loadLosses(prefix + '_loss.txt')
-        self.loadRewards(prefix + '_reward.txt')
+        #self.loadLosses(prefix + '_loss.txt')
+        #self.loadRewards(prefix + '_reward.txt')
         with open(prefix + '_memory.pickle', 'rb') as file:
             self.memory = pickle.load(file)
 
