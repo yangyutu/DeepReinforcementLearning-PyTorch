@@ -11,7 +11,7 @@ from Agents.Core.ReplayMemory import ReplayMemory, Transition
 
 import pickle
 class DDPGAgent:
-    def __init__(self, config, actorNets, criticNets, env, optimizers, netLossFunc, nbAction, stateProcessor = None):
+    def __init__(self, config, actorNets, criticNets, env, optimizers, netLossFunc, nbAction, stateProcessor = None, experienceProcessor = None):
 
         self.config = config
         self.read_config()
@@ -25,6 +25,7 @@ class DDPGAgent:
         self.numAction = nbAction
         self.stateProcessor = stateProcessor
         self.netLossFunc = netLossFunc
+        self.experienceProcessor = experienceProcessor
         self.initialization()
 
     def read_config(self):
@@ -123,6 +124,8 @@ class DDPGAgent:
         return action.cpu().data.numpy()[0]
 
     def store_experience(self, state, action, nextState, reward, info):
+        if self.experienceProcessor is not None:
+            state, action, nextState, reward = self.experienceProcessor(state, action, nextState, reward, info)
 
 
         transition = Transition(state, action, nextState, reward)

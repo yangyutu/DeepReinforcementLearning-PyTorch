@@ -7,7 +7,7 @@ import pickle
 
 
 class TDDDPGAgent(DDPGAgent):
-    def __init__(self, config, actorNets, criticNets, env, optimizers, netLossFunc, nbAction, stateProcessor=None):
+    def __init__(self, config, actorNets, criticNets, env, optimizers, netLossFunc, nbAction, stateProcessor=None, experienceProcessor = None):
 
         self.config = config
         self.read_config()
@@ -25,6 +25,7 @@ class TDDDPGAgent(DDPGAgent):
         self.numAction = nbAction
         self.stateProcessor = stateProcessor
         self.netLossFunc = netLossFunc
+        self.experienceProcessor = experienceProcessor
         self.initialization()
 
     def read_config(self):
