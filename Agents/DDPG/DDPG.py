@@ -80,6 +80,10 @@ class DDPGAgent:
             self.hindSightER = self.config['hindSightER']
             self.hindSightERFreq = self.config['hindSightERFreq']
 
+        self.policyUpdateFreq = 1
+        if 'policyUpdateFreq' in self.config:
+            self.policyUpdateFreq = self.config['policyUpdateFreq']
+
     def net_to_device(self):
         # move model to correct device
         self.actorNet = self.actorNet.to(self.device)
@@ -132,7 +136,8 @@ class DDPGAgent:
         self.memory.push(transition)
         if self.hindSightER and nextState is not None and self.globalStepCount%self.hindSightERFreq:
             stateNew, actionNew, nextStateNew, rewardNew = self.env.getHindSightExperience(state, action, nextState, info)
-            transition = Transition(stateNew, actionNew, nextStateNew, rewardNew)
+            if stateNew is not None:
+                transition = Transition(stateNew, actionNew, nextStateNew, rewardNew)
             self.memory.push(transition)
 
     def update_net(self, state, action, nextState, reward, info):
@@ -158,28 +163,15 @@ class DDPGAgent:
             nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None], device=self.device, dtype=torch.float32)
 
 
-
-
         # Critic loss
         QValues = self.criticNet.forward(state, action).squeeze()
+        # next action is calculated using target actor network
         next_actions = self.actorNet_target.forward(nonFinalNextState)
         QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32)
         QNext[nonFinalMask] = self.criticNet_target.forward(nonFinalNextState, next_actions.detach()).squeeze()
 
         targetValues = reward + self.gamma * QNext
         critic_loss = self.netLossFunc(QValues, targetValues)
-
-        # Actor loss
-        # we try to maximize criticNet output(which is state value)
-        policy_loss = -self.criticNet.forward(state, self.actorNet.forward(state)).mean()
-
-        # update networks
-        self.actor_optimizer.zero_grad()
-        policy_loss.backward()
-        if self.netGradClip is not None:
-            torch.nn.utils.clip_grad_norm_(self.actorNet.parameters(), self.netGradClip)
-
-        self.actor_optimizer.step()
 
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
@@ -188,16 +180,30 @@ class DDPGAgent:
 
         self.critic_optimizer.step()
 
-        if self.globalStepCount % self.lossRecordStep == 0:
-            self.losses.append([self.globalStepCount, self.epIdx, critic_loss.item(), policy_loss.item()])
+        # Actor loss
+        # we try to maximize criticNet output(which is state value)
 
-#        if self.globalStepCount % self.netUpdateFrequency == 0:
-        # update target networks
-        for target_param, param in zip(self.actorNet_target.parameters(), self.actorNet.parameters()):
-            target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
+        # update networks
+        if self.learnStepCounter % self.policyUpdateFreq == 0:
+            policy_loss = -self.criticNet.forward(state, self.actorNet.forward(state)).mean()
 
-        for target_param, param in zip(self.criticNet_target.parameters(), self.criticNet.parameters()):
-            target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
+            self.actor_optimizer.zero_grad()
+            policy_loss.backward()
+            if self.netGradClip is not None:
+                torch.nn.utils.clip_grad_norm_(self.actorNet.parameters(), self.netGradClip)
+
+            self.actor_optimizer.step()
+
+            if self.globalStepCount % self.lossRecordStep == 0:
+                self.losses.append([self.globalStepCount, self.epIdx, critic_loss.item(), policy_loss.item()])
+
+    #        if self.globalStepCount % self.netUpdateFrequency == 0:
+            # update target networks
+            for target_param, param in zip(self.actorNet_target.parameters(), self.actorNet.parameters()):
+                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
+
+            for target_param, param in zip(self.criticNet_target.parameters(), self.criticNet.parameters()):
+                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
         self.learnStepCounter += 1
 

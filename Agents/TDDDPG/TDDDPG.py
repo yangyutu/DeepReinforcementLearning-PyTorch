@@ -34,7 +34,7 @@ class TDDDPGAgent(DDPGAgent):
         self.policyUpdateFreq = 2
         if 'policyUpdateFreq' in self.config:
             self.policyUpdateFreq = self.config['policyUpdateFreq']
-        self.policySmoothNoise = 0.0
+        self.policySmoothNoise = 0.01
         if 'policySmoothNoise' in self.config:
             self.policyUpdateFreq = self.config['policySmoothNoise']
 
