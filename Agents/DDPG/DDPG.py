@@ -26,6 +26,8 @@ class DDPGAgent:
         self.stateProcessor = stateProcessor
         self.netLossFunc = netLossFunc
         self.experienceProcessor = experienceProcessor
+
+
         self.initialization()
 
     def read_config(self):
@@ -80,6 +82,12 @@ class DDPGAgent:
             self.hindSightER = self.config['hindSightER']
             self.hindSightERFreq = self.config['hindSightERFreq']
 
+        self.experienceAugmentation = False
+        if 'experienceAugmentation' in self.config:
+            self.experienceAugmentation = self.config['experienceAugmentation']
+            self.experienceAugmentationFreq = self.config['experienceAugmentationFreq']
+
+
         self.policyUpdateFreq = 1
         if 'policyUpdateFreq' in self.config:
             self.policyUpdateFreq = self.config['policyUpdateFreq']
@@ -126,19 +134,36 @@ class DDPGAgent:
                 action = net.select_action(stateTorch.to(self.device), noiseFlag)
 
         return action.cpu().data.numpy()[0]
+    def process_hindSightExperience(self, state, action, nextState, reward, info):
+        if nextState is not None and self.globalStepCount % self.hindSightERFreq == 0:
+            stateNew, actionNew, nextStateNew, rewardNew = self.env.getHindSightExperience(state, action, nextState, info)
+            if stateNew is not None:
+                transition = Transition(stateNew, actionNew, nextStateNew, rewardNew)
+                self.memory.push(transition)
+                if self.experienceAugmentation:
+                    self.process_experienceAugmentation(state, action, nextState, reward, info)
+
+    def process_experienceAugmentation(self, state, action, nextState, reward, info):
+        if self.globalStepCount % self.experienceAugmentationFreq == 0:
+            state_Augs, action_Augs, nextState_Augs, reward_Augs = self.env.getExperienceAugmentation(state, action, nextState,
+                                                                                            reward, info)
+            for i in range(len(state_Augs)):
+                transition = Transition(state_Augs[i], action_Augs[i], nextState_Augs[i], reward_Augs[i])
+                self.memory.push(transition)
 
     def store_experience(self, state, action, nextState, reward, info):
         if self.experienceProcessor is not None:
             state, action, nextState, reward = self.experienceProcessor(state, action, nextState, reward, info)
 
-
         transition = Transition(state, action, nextState, reward)
         self.memory.push(transition)
-        if self.hindSightER and nextState is not None and self.globalStepCount%self.hindSightERFreq:
-            stateNew, actionNew, nextStateNew, rewardNew = self.env.getHindSightExperience(state, action, nextState, info)
-            if stateNew is not None:
-                transition = Transition(stateNew, actionNew, nextStateNew, rewardNew)
-            self.memory.push(transition)
+
+        if self.experienceAugmentation:
+            self.process_experienceAugmentation(state, action, nextState, reward, info)
+
+        if self.hindSightER:
+            self.process_hindSightExperience(state, action, nextState, reward, info)
+
 
     def update_net(self, state, action, nextState, reward, info):
 
