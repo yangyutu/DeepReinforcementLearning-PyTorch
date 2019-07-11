@@ -191,7 +191,7 @@ class StochAgent(DetermAgent):
         self.angleStd = math.sqrt(2*self.Tc*self.Dr)
         self.xyStd = math.sqrt(2 * self.Tc * self.Dt) / self.a
 
-        self.jumpMat = np.load(self.config['JumpMatrix'])['jm']
+
         #self.jumpMat = np.genfromtxt('trajSampleAll.txt')
         self.currentState = np.array([0.0, 0.0, 0.0])
         self.constructSensorArrayIndex()
@@ -224,6 +224,8 @@ class StochAgent(DetermAgent):
         self.stochMoveFlag = False
         if 'stochMoveFlag' in self.config:
             self.stochMoveFlag = self.config['stochMoveFlag']
+            if self.stochMoveFlag:
+                self.jumpMat = np.load(self.config['JumpMatrix'])['jm']
 
         self.hindSightER = False
         if 'hindSightER' in self.config:
@@ -329,7 +331,7 @@ class StochAgent(DetermAgent):
         if action == 1:
             # enforce deterministic
             if not self.stochMoveFlag:
-                jmRaw = np.array([2.0, 0, 0], dtype=np.float32)
+                jmRaw = np.array([2.0, 0, random.gauss(0, self.angleStd)], dtype=np.float32)
             else:
                 jmRaw = self.jumpMatEpisode[self.stepCount, :]
 
@@ -486,8 +488,9 @@ class StochAgent(DetermAgent):
         self.hindSightInfo = {}
         self.epiCount += 1
         # store random jump for this episode
-        randomIdx = np.random.choice(self.jumpMat.shape[0], self.endStep + 10)
-        self.jumpMatEpisode = self.jumpMat[randomIdx, :]
+        if self.stochMoveFlag:
+            randomIdx = np.random.choice(self.jumpMat.shape[0], self.endStep + 10)
+            self.jumpMatEpisode = self.jumpMat[randomIdx, :]
 
         self.currentState = np.array(self.config['currentState'], dtype=np.float32)
         self.targetState = np.array(self.config['targetState'], dtype=np.int32)

@@ -22,27 +22,30 @@ def make_env(config, i):
     return _thunk
 
 
-envs = SubprocVecEnv([make_env(config, i) for i in range(numWorkers) ])
+if __name__=='__main__':
 
-state = envs.reset()
-stateSet = []
-doneList = []
-rewardList = []
-stateSet.append(state)
-for i in range(1000):
-    actionList = []
-    for _ in range(numWorkers):
-        action = random.randint(0, nbActions - 1)
-        actionList.append(action)
+    envs = SubprocVecEnv([make_env(config, i) for i in range(numWorkers) ])
 
-    # note that in vector envs: if one env finishes, it will automatically reset and start a new episode
-    state, reward, done, _ = envs.step(actionList)
+    state = envs.reset()
+    stateSet = []
+    doneList = []
+    rewardList = []
     stateSet.append(state)
-    doneList.append(done)
-    rewardList.append(reward)
-#    if done:
-#        break
+    for i in range(1000):
+        print(i)
+        actionList = []
+        for _ in range(numWorkers):
+            action = random.randint(0, nbActions - 1)
+            actionList.append(action)
+
+        # note that in vector envs: if one env finishes, it will automatically reset and start a new episode
+        state, reward, done, _ = envs.step(actionList)
+        stateSet.append(state)
+        doneList.append(done)
+        rewardList.append(reward)
+    #    if done:
+    #        break
 
 
-print(stateSet)
+    print(stateSet)
 
