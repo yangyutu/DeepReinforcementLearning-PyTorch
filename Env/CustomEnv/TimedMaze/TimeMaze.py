@@ -7,14 +7,13 @@ import math
 import sys
 
 
-class GoalSelectionEnv:
-    def __init__(self, configName, randomSeed=1):
+class TimeMazeEnv:
+    def __init__(self, config, randomSeed=1):
         """
         A model take in a particle configuration and actions and return updated a particle configuration
         """
 
-        with open(configName) as f:
-            self.config = json.load(f)
+        self.config = config
         self.randomSeed = randomSeed
         self.read_config()
         self.initilize()
@@ -47,11 +46,10 @@ class GoalSelectionEnv:
         self.constructSensorArrayIndex()
         self.epiCount = -1
 
-        self.JumpTime = 30
 
     def read_config(self):
 
-        self.receptHalfWidth = self.config['receptHalfWidth']
+        self.receptHalfWidth = self.config['agentReceptHalfWidth']
         self.padding = self.config['obstacleMapPaddingWidth']
         self.receptWidth = 2 * self.receptHalfWidth + 1
         self.targetClipLength = 2 * self.receptHalfWidth
@@ -59,7 +57,7 @@ class GoalSelectionEnv:
 
         self.sensorArrayWidth = (2 * self.receptHalfWidth + 1)
 
-        self.episodeEndStep = 500
+        self.episodeEndStep = 200
         if 'episodeLength' in self.config:
             self.episodeEndStep = self.config['episodeLength']
 
@@ -83,21 +81,13 @@ class GoalSelectionEnv:
         if 'obstacleFlag' in self.config:
             self.obstacleFlg = self.config['obstacleFlag']
 
-        self.nStep = self.config['modelNStep']
-
         self.actionPenalty = 0.0
         if 'actionPenalty' in self.config:
             self.actionPenalty = self.config['actionPenalty']
 
-        self.stepSize = self.config['stepSize']
-
-        self.pixelSize = 1
-        if 'pixelSize' in self.config:
-            self.pixelSize = self.config['pixelSize']
-
-        self.distanceScale = 20
-        if 'distanceScale' in self.config:
-            self.distanceScale = self.config['distanceScale']
+        self.scaleFactor = 1.0
+        if 'scaleFactor' in self.config:
+            self.scaleFactor = self.config['scaleFactor']
 
         self.obstaclePenalty = 0.1
         if 'obstaclePenalty' in self.config:
@@ -160,7 +150,7 @@ class GoalSelectionEnv:
 
         if self.is_terminal(distance):
             done = True
-            if 15 <= self.stepCount < 30 or 45 <= self.stepCount < 60 or self.stepCount > 75:
+            if 30 <= self.stepCount < 60 or 90 <= self.stepCount < 120 or self.stepCount > 150:
                 reward = 1.0
 
         if self.stepCount == self.episodeEndStep:
@@ -174,37 +164,55 @@ class GoalSelectionEnv:
         self.stepCount += 1
         # if self.customExploreFlag and self.epiCount < self.customExploreEpisode:
         #    action = self.getCustomAction()
-        action = action * self.stepSize
-        self.currentState += action  # instant movement
+        if action == 1:
+            # enforce deterministic
+            jmRaw = np.array([2.0, 0, random.gauss(0, self.angleStd)], dtype=np.float32)
 
-        distance = self.targetState - self.currentState
+        if action == 0:
+            jmRaw = np.array([0,
+                              0,
+                              random.gauss(0, self.angleStd)], dtype=np.float32)
+
+        # converting from local to lab coordinate movement
+        phi = self.currentState[2]
+        dx = jmRaw[0] * math.cos(phi) - jmRaw[1] * math.sin(phi)
+        dy = jmRaw[0] * math.sin(phi) + jmRaw[1] * math.cos(phi)
+        # check if collision will occur
+        i = math.floor(self.currentState[0] + dx + 0.5) + self.padding
+        j = math.floor(self.currentState[1] + dy + 0.5) + self.padding
+        if self.obsMap[i, j] == 0:
+            jm = np.array([dx, dy, jmRaw[2]], dtype=np.float32)
+        else:
+            jm = np.array([0.0, 0.0, jmRaw[2]], dtype=np.float32)
+
+        # update current state using modified jump matrix
+        self.currentState += jm
+        # make sure orientation within 0 to 2pi
+        self.currentState[2] = (self.currentState[2] + 2 * np.pi) % (2 * np.pi)
+
+        distance = self.targetState - self.currentState[0:2]
 
         done, reward = self.rewardCal(distance)
 
         # update sensor information
         if self.obstacleFlg:
             self.getSensorInfo()
-            penalty, flag = self.obstaclePenaltyCal()
-            reward += penalty
-            if flag:
-                print("on Obstacle: ", self.currentState)
-                self.currentState -= action
-
+        self.info['timeStep'] = self.stepCount
         self.info['previousTarget'] = self.targetState.copy()
         self.info['currentState'] = self.currentState.copy()
         self.info['currentTarget'] = self.targetState.copy()
 
         if self.obstacleFlg:
             state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                     'target': distance.copy() / self.distanceScale,
+                     'target': distance.copy() / self.scaleFactor,
                      'timeStep': self.stepCount}
         else:
-            state = distance / self.distanceScale
+            state = distance / self.scaleFactor
 
         return state, reward, done, self.info.copy()
 
     def is_terminal(self, distance):
-        return np.linalg.norm(distance, ord=np.inf) < self.stepSize
+        return np.linalg.norm(distance, ord=np.inf) < 2.0
 
     def reset_helper(self):
         # set target information
@@ -233,18 +241,32 @@ class GoalSelectionEnv:
                     break
             # set initial state
             print('target distance', distance)
-            self.currentState = np.array([row - self.padding, col - self.padding], dtype=np.float32)
+            self.currentState = np.array([row - self.padding, col - self.padding, random.random()*2*math.pi], dtype=np.float32)
 
-        _, onObstacle = self.obstaclePenaltyCal()
-        if onObstacle:
-            print("initial config on obstacle!")
+
+
+    def timeIndexScheduler(self):
+
+        kink = 2500
+        if self.epiCount < kink:
+            return random.randint(150, 199)
+        elif self.epiCount < 2 * kink:
+            return random.randint(120, 199)
+        elif self.epiCount < 3 * kink:
+            return random.randint(90, 199)
+        elif self.epiCount < 4 * kink:
+            return random.randint(60, 199)
+        elif self.epiCount < 5 * kink:
+            return random.randint(30, 199)
+        else:
+            return 0
 
     def reset(self):
-        self.stepCount = 0
+        self.stepCount = self.timeIndexScheduler()
         self.hindSightInfo = {}
         self.info = {}
         self.epiCount += 1
-
+        self.info['timeStep'] = self.stepCount
         self.currentState = np.array(self.config['currentState'], dtype=np.float32)
         self.targetState = np.array(self.config['targetState'], dtype=np.float32)
 
@@ -253,18 +275,18 @@ class GoalSelectionEnv:
         if self.obstacleFlg:
             self.getSensorInfo()
 
-        distance = self.targetState - self.currentState
+        distance = self.targetState - self.currentState[0:2]
 
         self.info['currentTarget'] = self.targetState.copy()
 
         # angleDistance = math.atan2(distance[1], distance[0]) - self.currentState[2]
         if self.obstacleFlg:
             state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                     'target': distance.copy() / self.distanceScale,
+                     'target': distance.copy() / self.scaleFactor,
                      'timeStep': self.stepCount}
             return state
         else:
-            return distance / self.distanceScale
+            return distance / self.scaleFactor
 
     def initObsMat(self):
         fileName = self.config['mapName']

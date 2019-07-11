@@ -60,7 +60,7 @@ class StackedDQNAgent(DQNAgent):
 
     def init_memory(self):
 
-        self.memories = [ReplayMemory(self.memoryCapacity) for _ in range(len(self.episodeLength))]
+        self.memories = [ReplayMemory(self.memoryCapacity) for _ in range(len(self.policyNets))]
 
     def store_experience(self, state, action, nextState, reward, info):
 
@@ -69,9 +69,9 @@ class StackedDQNAgent(DQNAgent):
             # caution: using multiple step forward return can increase variance
             # if it is one step
 
-            timeStep = self.timeIndexMap(state['timeStep'])
-            transition = Transition(state, action, nextState, reward)
-            self.memories[timeStep].push(transition)
+        timeStep = self.timeIndexMap[state['timeStep']]
+        transition = Transition(state, action, nextState, reward)
+        self.memories[timeStep].push(transition)
 
     def train(self):
 
@@ -145,7 +145,7 @@ class StackedDQNAgent(DQNAgent):
         if self.globalStepCount % self.netUpdateFrequency == 0:
             # sample experience
 
-            for i in range(len(self.memories) - 1, -1):
+            for i in range(len(self.memories) - 1, -1, -1):
                 if len(self.memories[i]) < self.trainBatchSize:
                     continue
 
@@ -155,7 +155,7 @@ class StackedDQNAgent(DQNAgent):
                 self.optimizer = self.optimizers[i]
 
                 if self.netUpdateOption == 'targetNet' or self.netUpdateOption == 'doubleQ':
-                    if i == (len(self.memories) - 1):
+                    if i < (len(self.memories) - 1):
                         self.targetNet = self.targetNets[i + 1]
                     else:
                         self.targetNet = self.targetNets[i]
