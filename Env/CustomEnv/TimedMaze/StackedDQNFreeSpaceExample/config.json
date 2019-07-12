@@ -1,6 +1,6 @@
 {
-    "mapName": "singleObstacle",
-    "multiMapName": "singleObstacle,freeSpaceLarge",
+    "mapName": "freeSpaceLarge",
+    "multiMapName": "freeSpaceLarge,freeSpaceLarge",
     "multiMapProb": [1.0, 0],
     "JumpMatrix": "../trajSampleHalfSlow.npz",
     "trainStep": 20000,
@@ -29,13 +29,14 @@
     "device": "cuda",
     "numWorkers": 4,
     "numCircObs": 2,
-    "agentReceptHalfWidth": 10,
-    "obstacleMapPaddingWidth": 20,
+    "agentReceptHalfWidth": 3,
+    "obstacleMapPaddingWidth": 6,
     "scaleFactor": 30,
     "wallPenalty": 0,
+    "rewardKinks": [],
     "targetState": [
-        2.0,
-        2.0
+        15.0,
+        15.0
     ],
     "currentState": [
         15.0,

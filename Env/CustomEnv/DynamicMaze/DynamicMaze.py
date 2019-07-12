@@ -301,9 +301,10 @@ class StochAgent(DetermAgent):
             # distance will be changed from lab coordinate to local coordinate
             dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
             dy = - distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
-
+            timeStep = state['timeStep']
             combinedState = {'sensor': sensorInfoMat,
-                             'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor])}
+                             'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor]),
+                             'timeStep': timeStep}
 
             actionNew = action
             rewardNew = 40.0 / self.rewardScale
@@ -314,14 +315,6 @@ class StochAgent(DetermAgent):
         y_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
         [Y, X] = np.meshgrid(y_int, x_int)
         self.senorIndex = np.stack((X.reshape(-1), Y.reshape(-1)), axis=1)
-        # sensormap maps a location (x, y) to to an index. for example (-5, -5) to 0
-        # self.sensorMap = {}
-        # for i, x in enumerate(x_int):
-        #     for j, y in enumerate(y_int):
-        #         self.sensorMap[(x, y)] = i * self.receptWidth + j
-
-    #def is_on_obstacle(self, i, j):
-    #    return self.sensorInfoArray[self.sensorMap[(i, j)]] == 1
 
 
     def step(self, action):
@@ -443,7 +436,8 @@ class StochAgent(DetermAgent):
         self.info['currentDistance'] = math.sqrt(dx**2 + dy**2)
 
         combinedState = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                         'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor])}
+                         'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor]),
+                         'timeStep': self.stepCount}
         return combinedState, reward, done, self.info.copy()
 
     def is_terminal(self, distance):
@@ -522,7 +516,8 @@ class StochAgent(DetermAgent):
 
         #angleDistance = math.atan2(distance[1], distance[0]) - self.currentState[2]
         combinedState = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                         'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor])}
+                         'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor]),
+                         'timeStep': self.stepCount}
         return combinedState
 
     def __deepcopy__(self, memo):

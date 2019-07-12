@@ -141,6 +141,13 @@ class StackedDQNAgent(DQNAgent):
 
         self.store_experience(state, action, nextState, reward, info)
 
+
+        if self.hindSightER and nextState is not None and self.globalStepCount % self.hindSightERFreq == 0:
+            stateNew, actionNew, nextStateNew, rewardNew = self.env.getHindSightExperience(state, action, nextState, info)
+            if stateNew is not None:
+                self.store_experience(stateNew, actionNew, nextStateNew, rewardNew, info)
+
+
         # update net with specified frequency
         if self.globalStepCount % self.netUpdateFrequency == 0:
             # sample experience
@@ -151,7 +158,6 @@ class StackedDQNAgent(DQNAgent):
 
                 transitions_raw = self.memories[i].sample(self.trainBatchSize)
                 self.policyNet = self.policyNets[i]
-                self.targetNet = self.targetNets[i]
                 self.optimizer = self.optimizers[i]
 
                 if self.netUpdateOption == 'targetNet' or self.netUpdateOption == 'doubleQ':
@@ -183,7 +189,7 @@ class StackedDQNAgent(DQNAgent):
             'optimizer_state_dict': [opt.state_dict() for opt in self.optimizers]
         }, prefix + '_checkpoint.pt')
         with open(prefix + '_memory.pickle', 'wb') as file:
-            pickle.dump(self.memory, file)
+            pickle.dump(self.memories, file)
         self.saveLosses(prefix + '_loss.txt')
         self.saveRewards(prefix + '_reward.txt')
 
@@ -211,6 +217,6 @@ class StackedDQNAgent(DQNAgent):
         self.epIdx = checkpoint['epoch']
         self.globalStepCount = checkpoint['globalStep']
         for i in range(len(self.policyNets)):
-            self.policyNet.load_state_dict(checkpoint['model_state_dict'][i])
-            self.targetNet.load_state_dict(checkpoint['model_state_dict'][i])
-            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'][i])
+            self.policyNets[i].load_state_dict(checkpoint['model_state_dict'][i])
+            self.targetNets[i].load_state_dict(checkpoint['model_state_dict'][i])
+            self.optimizers[i].load_state_dict(checkpoint['optimizer_state_dict'][i])

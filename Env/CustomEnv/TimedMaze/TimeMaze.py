@@ -46,7 +46,6 @@ class TimeMazeEnv:
         self.constructSensorArrayIndex()
         self.epiCount = -1
 
-
     def read_config(self):
 
         self.receptHalfWidth = self.config['agentReceptHalfWidth']
@@ -93,6 +92,14 @@ class TimeMazeEnv:
         if 'obstaclePenalty' in self.config:
             self.obstaclePenalty = self.config['obstaclePenalty']
 
+        #self.jumpMat = np.load(self.config['JumpMatrix'])['jm']
+
+        self.rewardKinks = self.config['rewardKinks']
+
+        self.kinkEpisode = 500
+        if 'kinkEpisode' in self.config:
+            self.kinkEpisode = self.config['kinkEpisode']
+
     def thresh_by_episode(self, step):
         return self.endThresh + (
                 self.startThresh - self.endThresh) * math.exp(-1. * step / self.distanceThreshDecay)
@@ -102,6 +109,31 @@ class TimeMazeEnv:
         y_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
         [Y, X] = np.meshgrid(y_int, x_int)
         self.senorIndex = np.stack((X.reshape(-1), Y.reshape(-1)), axis=1)
+
+    def getHindSightExperience(self, state, action, nextState, info):
+        # if hit an obstacle or if action is to keep still
+        if self.hindSightInfo['obsFlag'] or action == 0:
+            return None, None, None, None
+        else:
+            targetNew = self.hindSightInfo['currentState'][0:2]
+
+            distance = targetNew - self.hindSightInfo['previousState'][0:2]
+            phi = self.hindSightInfo['previousState'][2]
+
+            sensorInfoMat = self.getSensorInfoFromPos(self.hindSightInfo['previousState'])
+
+            # distance will be changed from lab coordinate to local coordinate
+            dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
+            dy = - distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
+
+            timeStep = state['timeStep']
+            combinedState = {'sensor': sensorInfoMat,
+                             'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor]),
+                             'timeStep': timeStep}
+
+            actionNew = action
+            _, rewardNew = self.rewardCal(distance, timeStep)
+            return combinedState, actionNew, None, rewardNew
 
     def getSensorInfo(self):
         # sensor information needs to consider orientation information
@@ -132,8 +164,8 @@ class TimeMazeEnv:
                               [math.sin(phi), math.cos(phi)]])
         transIndex = np.matmul(self.senorIndex, rotMatrx.T).astype(np.int)
 
-        i = math.floor(self.currentState[0] + 0.5)
-        j = math.floor(self.currentState[1] + 0.5)
+        i = math.floor(position[0] + 0.5)
+        j = math.floor(position[1] + 0.5)
 
         transIndex[:, 0] += self.padding + i
         transIndex[:, 1] += self.padding + j
@@ -144,22 +176,32 @@ class TimeMazeEnv:
         # use augumented obstacle matrix to check collision
         return np.expand_dims(sensorInfoMat, axis=0)
 
-    def rewardCal(self, distance):
+    def rewardCal(self, distance, stepCount):
         done = False
         reward = 0.0
 
         if self.is_terminal(distance):
             done = True
-            if 30 <= self.stepCount < 60 or 90 <= self.stepCount < 120 or self.stepCount > 150:
+
+            if len(self.rewardKinks):
+                i = 0
+                while i + 1 < len(self.rewardKinks):
+                    if self.rewardKinks[i] <= stepCount < self.rewardKinks[i + 1]:
+                        reward = 1.0
+
+
+                if stepCount > self.rewardKinks[-1]:
+                    reward = 1.0
+            else:
                 reward = 1.0
 
-        if self.stepCount == self.episodeEndStep:
+        if stepCount >= self.episodeEndStep:
             done = True
 
         return done, reward
 
     def step(self, action):
-
+        self.hindSightInfo['previousState'] = self.currentState.copy()
         # update step count
         self.stepCount += 1
         # if self.customExploreFlag and self.epiCount < self.customExploreEpisode:
@@ -182,17 +224,25 @@ class TimeMazeEnv:
         j = math.floor(self.currentState[1] + dy + 0.5) + self.padding
         if self.obsMap[i, j] == 0:
             jm = np.array([dx, dy, jmRaw[2]], dtype=np.float32)
+            self.hindSightInfo['obsFlag'] = False
         else:
             jm = np.array([0.0, 0.0, jmRaw[2]], dtype=np.float32)
-
+            self.hindSightInfo['obsFlag'] = True
         # update current state using modified jump matrix
         self.currentState += jm
         # make sure orientation within 0 to 2pi
         self.currentState[2] = (self.currentState[2] + 2 * np.pi) % (2 * np.pi)
+        self.hindSightInfo['currentState'] = self.currentState.copy()
 
         distance = self.targetState - self.currentState[0:2]
 
-        done, reward = self.rewardCal(distance)
+        done, reward = self.rewardCal(distance, self.stepCount)
+
+        # distance will be changed from lab coordinate to local coordinate
+        phi = self.currentState[2]
+        dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
+        dy = - distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
+
 
         # update sensor information
         if self.obstacleFlg:
@@ -204,7 +254,7 @@ class TimeMazeEnv:
 
         if self.obstacleFlg:
             state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                     'target': distance.copy() / self.scaleFactor,
+                     'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor]),
                      'timeStep': self.stepCount}
         else:
             state = distance / self.scaleFactor
@@ -241,23 +291,17 @@ class TimeMazeEnv:
                     break
             # set initial state
             print('target distance', distance)
-            self.currentState = np.array([row - self.padding, col - self.padding, random.random()*2*math.pi], dtype=np.float32)
-
-
+            self.currentState = np.array([row - self.padding, col - self.padding, random.random() * 2 * math.pi],
+                                         dtype=np.float32)
 
     def timeIndexScheduler(self):
 
-        kink = 2500
-        if self.epiCount < kink:
-            return random.randint(150, 199)
-        elif self.epiCount < 2 * kink:
-            return random.randint(120, 199)
-        elif self.epiCount < 3 * kink:
-            return random.randint(90, 199)
-        elif self.epiCount < 4 * kink:
-            return random.randint(60, 199)
-        elif self.epiCount < 5 * kink:
-            return random.randint(30, 199)
+        kink = self.kinkEpisode
+
+        idx = int(self.epiCount / kink)
+
+        if idx < len(self.rewardKinks):
+            return random.randint(self.rewardKinks[-idx], self.episodeEndStep - 1)
         else:
             return 0
 
@@ -266,6 +310,7 @@ class TimeMazeEnv:
         self.hindSightInfo = {}
         self.info = {}
         self.epiCount += 1
+        self.info['scaleFactor'] = self.scaleFactor
         self.info['timeStep'] = self.stepCount
         self.currentState = np.array(self.config['currentState'], dtype=np.float32)
         self.targetState = np.array(self.config['targetState'], dtype=np.float32)
@@ -277,12 +322,16 @@ class TimeMazeEnv:
 
         distance = self.targetState - self.currentState[0:2]
 
+        phi = self.currentState[2]
+        dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
+        dy = - distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
+
         self.info['currentTarget'] = self.targetState.copy()
 
         # angleDistance = math.atan2(distance[1], distance[0]) - self.currentState[2]
         if self.obstacleFlg:
             state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                     'target': distance.copy() / self.scaleFactor,
+                     'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor]),
                      'timeStep': self.stepCount}
             return state
         else:
