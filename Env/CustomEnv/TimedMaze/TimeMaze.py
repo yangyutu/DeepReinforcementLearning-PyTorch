@@ -92,7 +92,11 @@ class TimeMazeEnv:
         if 'obstaclePenalty' in self.config:
             self.obstaclePenalty = self.config['obstaclePenalty']
 
-        #self.jumpMat = np.load(self.config['JumpMatrix'])['jm']
+        self.stochMoveFlag = False
+        if 'stochMoveFlag' in self.config:
+            self.stochMoveFlag = self.config['stochMoveFlag']
+            if self.stochMoveFlag:
+                self.jumpMat = np.load(self.config['JumpMatrix'])['jm']
 
         self.rewardKinks = self.config['rewardKinks']
 
@@ -132,7 +136,8 @@ class TimeMazeEnv:
                              'timeStep': timeStep}
 
             actionNew = action
-            _, rewardNew = self.rewardCal(distance, timeStep)
+            # here [0, 0] is dummy input to ensure done is always true
+            _, rewardNew = self.rewardCal(np.array([0, 0]), timeStep)
             return combinedState, actionNew, None, rewardNew
 
     def getSensorInfo(self):
@@ -157,7 +162,7 @@ class TimeMazeEnv:
 
     def getSensorInfoFromPos(self, position):
 
-        phi = self.currentState[2]
+        phi = position[2]
         #   phi = (self.stepCount)*math.pi/4.0
         # this is rotation matrix transform from local coordinate system to lab coordinate system
         rotMatrx = np.matrix([[math.cos(phi), -math.sin(phi)],
@@ -188,6 +193,7 @@ class TimeMazeEnv:
                 while i + 1 < len(self.rewardKinks):
                     if self.rewardKinks[i] <= stepCount < self.rewardKinks[i + 1]:
                         reward = 1.0
+                    i += 2
 
 
                 if stepCount > self.rewardKinks[-1]:
@@ -208,12 +214,25 @@ class TimeMazeEnv:
         #    action = self.getCustomAction()
         if action == 1:
             # enforce deterministic
-            jmRaw = np.array([2.0, 0, random.gauss(0, self.angleStd)], dtype=np.float32)
+            if not self.stochMoveFlag:
+                jmRaw = np.array([2.0, 0, random.gauss(0, self.angleStd)], dtype=np.float32)
+            else:
+                jmRaw = self.jumpMatEpisode[self.stepCount, :]
+
+                # for symmetric dynamics
+                if random.random() < 0.5:
+                    jmRaw[1] = -jmRaw[1]
+                    jmRaw[2] = -jmRaw[2]
 
         if action == 0:
-            jmRaw = np.array([0,
-                              0,
+            jmRaw = np.array([random.gauss(0, self.xyStd),
+                              random.gauss(0, self.xyStd),
                               random.gauss(0, self.angleStd)], dtype=np.float32)
+
+            # enforce deterministic
+            if not self.stochMoveFlag:
+                jmRaw[0] = 0.0
+                jmRaw[1] = 0.0
 
         # converting from local to lab coordinate movement
         phi = self.currentState[2]
@@ -298,10 +317,10 @@ class TimeMazeEnv:
 
         kink = self.kinkEpisode
 
-        idx = int(self.epiCount / kink)
+        idx = int(self.epiCount / kink) + 1
 
-        if idx < len(self.rewardKinks):
-            return random.randint(self.rewardKinks[-idx], self.episodeEndStep - 1)
+        if idx <= len(self.rewardKinks):
+            return np.random.choice(self.rewardKinks[-idx:], 1)[0]
         else:
             return 0
 
@@ -312,6 +331,11 @@ class TimeMazeEnv:
         self.epiCount += 1
         self.info['scaleFactor'] = self.scaleFactor
         self.info['timeStep'] = self.stepCount
+        # store random jump for this episode
+        if self.stochMoveFlag:
+            randomIdx = np.random.choice(self.jumpMat.shape[0], self.episodeEndStep + 10)
+            self.jumpMatEpisode = self.jumpMat[randomIdx, :]
+
         self.currentState = np.array(self.config['currentState'], dtype=np.float32)
         self.targetState = np.array(self.config['targetState'], dtype=np.float32)
 

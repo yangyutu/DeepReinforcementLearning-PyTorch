@@ -58,6 +58,8 @@ class StackedDQNAgent(DQNAgent):
         self.rewards = []
         self.nStepBuffer = []
 
+        self.individualStepCounts = [0 for _ in range(len(self.policyNets))]
+
     def init_memory(self):
 
         self.memories = [ReplayMemory(self.memoryCapacity) for _ in range(len(self.policyNets))]
@@ -90,7 +92,7 @@ class StackedDQNAgent(DQNAgent):
 
                 timeStep = self.timeIndexMap[state['timeStep']]
 
-                epsThreshold = self.epsilon_by_step(self.globalStepCount * (timeStep + 1) / len(self.policyNets))
+                epsThreshold = self.epsilon_by_step(self.individualStepCounts[timeStep])
 
                 action = self.select_action(self.policyNets[timeStep], state, epsThreshold)
 
@@ -109,7 +111,7 @@ class StackedDQNAgent(DQNAgent):
                 state = nextState
                 rewardSum += reward * pow(self.gamma, stepCount)
                 self.globalStepCount += 1
-
+                self.individualStepCounts[timeStep] += 1
                 if self.verbose:
                     print('action: ' + str(action))
                     print('state:')
@@ -175,8 +177,9 @@ class StackedDQNAgent(DQNAgent):
                 if self.globalStepCount % self.lossRecordStep == 0:
                     self.losses.append([self.globalStepCount, self.epIdx, loss])
 
+                # caution! it is targetNets[i] not targetNets[i + 1]
                 if self.learnStepCounter % self.targetNetUpdateStep == 0:
-                    self.targetNet.load_state_dict(self.policyNet.state_dict())
+                    self.targetNets[i].load_state_dict(self.policyNet.state_dict())
 
             self.learnStepCounter += 1
 

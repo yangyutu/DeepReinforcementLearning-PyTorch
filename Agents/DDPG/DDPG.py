@@ -173,6 +173,23 @@ class DDPGAgent:
         if len(self.memory) < self.trainBatchSize:
             return
         transitions_raw = self.memory.sample(self.trainBatchSize)
+        # update networks
+
+        self.update_net_on_transitions(transitions_raw)
+        # soft copy to target nets
+        if self.learnStepCounter % self.policyUpdateFreq == 0:
+
+        # if self.globalStepCount % self.netUpdateFrequency == 0:
+            # update target networks
+            for target_param, param in zip(self.actorNet_target.parameters(), self.actorNet.parameters()):
+                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
+
+            for target_param, param in zip(self.criticNet_target.parameters(), self.criticNet.parameters()):
+                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
+
+        self.learnStepCounter += 1
+
+    def update_net_on_transitions(self, transitions_raw):
         transitions = Transition(*zip(*transitions_raw))
         action = torch.tensor(transitions.action, device=self.device, dtype=torch.float32)  # shape(batch, numActions)
         reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32)  # shape(batch)
@@ -184,9 +201,10 @@ class DDPGAgent:
             nonFinalNextState, nonFinalMask = self.stateProcessor(transitions.next_state, self.device)
         else:
             state = torch.tensor(transitions.state, device=self.device, dtype=torch.float32)
-            nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)), device=self.device, dtype=torch.uint8)
-            nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None], device=self.device, dtype=torch.float32)
-
+            nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)), device=self.device,
+                                        dtype=torch.uint8)
+            nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None], device=self.device,
+                                             dtype=torch.float32)
 
         # Critic loss
         QValues = self.criticNet.forward(state, action).squeeze()
@@ -205,9 +223,6 @@ class DDPGAgent:
 
         self.critic_optimizer.step()
 
-        # Actor loss
-        # we try to maximize criticNet output(which is state value)
-
         # update networks
         if self.learnStepCounter % self.policyUpdateFreq == 0:
             policy_loss = -self.criticNet.forward(state, self.actorNet.forward(state)).mean()
@@ -221,16 +236,6 @@ class DDPGAgent:
 
             if self.globalStepCount % self.lossRecordStep == 0:
                 self.losses.append([self.globalStepCount, self.epIdx, critic_loss.item(), policy_loss.item()])
-
-    #        if self.globalStepCount % self.netUpdateFrequency == 0:
-            # update target networks
-            for target_param, param in zip(self.actorNet_target.parameters(), self.actorNet.parameters()):
-                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
-
-            for target_param, param in zip(self.criticNet_target.parameters(), self.criticNet.parameters()):
-                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
-
-        self.learnStepCounter += 1
 
 
     def train(self):
