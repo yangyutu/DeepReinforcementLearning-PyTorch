@@ -34,7 +34,12 @@ class HedgingSimulator:
         self.epiCount = -1
 
     def totalWealth(self):
-        return np.sum(self.currentState[0:2])
+
+        res = np.sum(self.currentState[0:2])
+        if self.stepCount >= self.episodeLength:
+            res += - max(self.currentState[2] - self.optionStrike, 0.0)
+
+        return res
 
     def rewardCal(self):
         done = False
@@ -44,18 +49,19 @@ class HedgingSimulator:
             done = True
             # exponenential utility
             # https://en.wikipedia.org/wiki/Exponential_utility
-            totalWealth = self.totalWealth() - max(self.currentState[2] - self.optionStrike, 0.0)
+            totalWealth = self.totalWealth()
             reward = (1 - math.exp(-totalWealth * self.riskAverse)) / self.rewardScale
             self.info['totalWealth'] = totalWealth
         return done, reward
 
     def timeIndexScheduler(self):
 
-        kink = 2500
+        idx = int(self.epiCount / self.kinkEpisode) + 1
 
-        #idx = int(self.epiCount / kink)
-
-        return 0
+        if idx > self.episodeLength:
+            return 0
+        else:
+            return self.episodeLength - idx
 
     def evolveStock(self, stockValue):
         return stockValue * math.exp((self.ret_Stock - 0.5 * math.pow(self.vol, 2)) \
@@ -76,6 +82,7 @@ class HedgingSimulator:
         done, reward = self.rewardCal()
         combinedState = {'state': self.currentState.copy(), 'timeStep': self.stepCount}
         self.info['currentState'] = self.currentState.copy()
+        self.info['action'] = action
         return combinedState, reward, done, self.info
 
     def reset(self):
@@ -84,13 +91,16 @@ class HedgingSimulator:
         self.info = {}
         self.stepCount = self.timeIndexScheduler()
         self.info['timeStep'] = self.stepCount
-
-        self.currentState = np.array([0.0, 0.0, 0.0])
+        if self.stepCount == 0:
+            self.currentState = np.array([0.0, 0.0, 0.0])
+        else:
+            self.currentState = np.random.normal(0.0, 1.0, 3)
         #self.currentState[0:2] = np.random.random(2)
         self.S0 = np.random.random() + 0.5
+        self.currentState[2] = self.S0
         #self.S0 = 1.0
-        self.currentState[2] = self.S0 * math.exp( (self.ret_Stock - 0.5 * math.pow(self.vol, 2)) * self.stepCount \
-                                                   + np.random.normal() * self.vol * math.sqrt(self.stepCount))
+        #self.currentState[2] = self.S0 * math.exp( (self.ret_Stock - 0.5 * math.pow(self.vol, 2)) * self.stepCount \
+        #                                           + np.random.normal() * self.vol * math.sqrt(self.stepCount))
 
 
         self.info['initialState'] = self.currentState.copy()

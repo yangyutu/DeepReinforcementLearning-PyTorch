@@ -127,7 +127,7 @@ class StackedDDPGAgent(DDPGAgent):
         QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32)
         if len(nonFinalNextState):
             next_actions = self.actorNet_target.forward(nonFinalNextState)
-            QNext[nonFinalNextState] = self.criticNet_target.forward(nonFinalNextState, next_actions.detach()).squeeze()
+            QNext[nonFinalMask] = self.criticNet_target.forward(nonFinalNextState, next_actions.detach()).squeeze()
 
         targetValues = reward + self.gamma * QNext
         critic_loss = self.netLossFunc(QValues, targetValues)
