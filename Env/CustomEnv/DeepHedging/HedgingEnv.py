@@ -6,55 +6,60 @@ class HedgingSimulator:
     def __init__(self, config = None, seed = 1):
         self.config = config
         self.stepCount = 0
-        self.currentState = 0.0
         self.nbActions = 1
         self.stateDim = 3 # cash position, stock position, the stock price
-        self.endStep = 30
-        self.cumRet = 1.0
         self.randomSeed = seed
         self.retHist = []
-        self.AR1Coeff = self.config['AR1Coeff']
-
-        self.nSample = 200
-        if 'nSample' in self.config:
-            self.nSample = self.config['nSample']
-
         self.infoDict = {}
-        self.episodeLength = self.endStep
-        self.ret_Stock = math.pow((1.1 - 1), 1/250)
-        self.ret_Bond = math.pow((1.00 - 1), 1/250)
-        self.vol = 0.3 / math.sqrt(250)
 
-        self.optionStrike = 1
+        self.daysInYear = 250
+        self.ret_Stock = (self.config['stockGrossReturn'] - 1)/self.daysInYear
+        self.ret_Bond = (self.config['bondGrossReturn'] - 1)/self.daysInYear
+        self.vol = self.config['stockVol'] / math.sqrt(self.daysInYear)
+
+        self.episodeLength = self.config['episodeLength']
+
+        self.optionStrike = self.config['optionStrike']
+        self.S0 = 1
+        # risk aversion parameter should be large when vol is small such that signal is large
+        self.riskAverse = self.config['riskAverse']
+        # reward scale should be adjusted based on actual reward
+        self.rewardScale = self.config['rewardScale']
+
+
+        self.kinkEpisode = 2500
+        if 'kinkEpisode' in self.config:
+            self.kinkEpisode = self.config['kinkEpisode']
+
+        self.epiCount = -1
 
     def totalWealth(self):
-        return np.sum(self.currentState)
+        return np.sum(self.currentState[0:2])
 
     def rewardCal(self):
         done = False
         reward = 0.0
 
-        if self.stepCount >= self.episodeEndStep:
+        if self.stepCount >= self.episodeLength:
             done = True
             # exponenential utility
             # https://en.wikipedia.org/wiki/Exponential_utility
-            reward = (1 - math.exp(-self.totalWealth()))
+            totalWealth = self.totalWealth() - max(self.currentState[2] - self.optionStrike, 0.0)
+            reward = (1 - math.exp(-totalWealth * self.riskAverse)) / self.rewardScale
+            self.info['totalWealth'] = totalWealth
         return done, reward
 
     def timeIndexScheduler(self):
 
         kink = 2500
 
-        idx = int(self.epiCount / kink)
+        #idx = int(self.epiCount / kink)
 
-        if idx > self.episodeEndStep:
-            return 0
-        else:
-            return random.randint(self.episodeEndStep - 1 - idx, self.episodeEndStep - 1)
+        return 0
 
     def evolveStock(self, stockValue):
-        # generate n samples of future values
-        return stockValue * math.exp(self.ret_Stock - 0.5 * math.pow(self.vol, 2) + np.random.normal() * self.vol)
+        return stockValue * math.exp((self.ret_Stock - 0.5 * math.pow(self.vol, 2)) \
+                                     + np.random.normal() * self.vol )
 
     def step(self, action):
         # action means the amount of dollar value stocks to buy
@@ -62,28 +67,33 @@ class HedgingSimulator:
         self.currentState[1] += action  # increase stock
 
         self.currentState[0] = self.currentState[0] * (1 + self.ret_Bond)
-        self.currentState[1] = self.evolveStock(self.currentState[1])
-        self.currentState[2] = self.evolveStock(self.currentState[2])
+        growthFactor = self.evolveStock(1.0)
+        self.currentState[1] *= growthFactor
+        self.currentState[2] *= growthFactor
 
         self.stepCount += 1
         self.info['timeStep'] = self.stepCount
         done, reward = self.rewardCal()
         combinedState = {'state': self.currentState.copy(), 'timeStep': self.stepCount}
-
-        return combinedState, reward, done, self.infoDict
+        self.info['currentState'] = self.currentState.copy()
+        return combinedState, reward, done, self.info
 
     def reset(self):
         #self.infoDict['reset'] = True
+        self.epiCount += 1
+        self.info = {}
         self.stepCount = self.timeIndexScheduler()
         self.info['timeStep'] = self.stepCount
 
-        self.currentState = np.array([0, 0, 0])
-        self.currentState[0:2] = np.random.normal(2)
-        self.currentState[2] = self.S0 * math.exp( (self.ret_Stock - 0.5 * math.pow(self.vol, 2)) * self.episodeLength \
-                                                   + np.random.normal() * self.vol * math.sqrt(self.episodeLength))
+        self.currentState = np.array([0.0, 0.0, 0.0])
+        #self.currentState[0:2] = np.random.random(2)
+        self.S0 = np.random.random() + 0.5
+        #self.S0 = 1.0
+        self.currentState[2] = self.S0 * math.exp( (self.ret_Stock - 0.5 * math.pow(self.vol, 2)) * self.stepCount \
+                                                   + np.random.normal() * self.vol * math.sqrt(self.stepCount))
 
 
-
+        self.info['initialState'] = self.currentState.copy()
         combinedState = {'state': self.currentState.copy(), 'timeStep': self.stepCount}
 
         return combinedState

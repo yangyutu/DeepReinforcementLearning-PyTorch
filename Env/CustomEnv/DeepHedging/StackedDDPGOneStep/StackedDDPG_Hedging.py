@@ -1,6 +1,6 @@
 
 
-from Agents.DDPG.DDPG import DDPGAgent
+from Agents.StackedDDPG.StackedDDPG  import StackedDDPGAgent
 from Env.CustomEnv.StablizerTwoD import StablizerTwoDContinuousSP
 from utils.netInit import xavier_init
 import json
@@ -44,7 +44,7 @@ class Actor(nn.Module):
         self.linear2 = nn.Linear(hidden_size, hidden_size)
         self.linear3 = nn.Linear(hidden_size, output_size)
         self.apply(xavier_init)
-        self.noise = OUNoise(output_size, seed = 1, mu=0.0, theta=0.5, max_sigma=0.05, min_sigma=0.001, decay_period=10000)
+        self.noise = OUNoise(output_size, seed = 1, mu=0.0, theta=0.5, max_sigma=0.5, min_sigma=0.05, decay_period=100000)
         self.noise.reset()
     def forward(self, state):
         """
@@ -52,7 +52,7 @@ class Actor(nn.Module):
         """
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
-        action = torch.sigmoid(self.linear3(x))
+        action = self.linear3(x)
 
         return action
 
@@ -62,24 +62,25 @@ class Actor(nn.Module):
             action = self.forward(state)
             noise = self.noise.get_noise()
             action += torch.tensor(noise, dtype=torch.float32).unsqueeze(0)
-            action = torch.clamp(action, 0, 1)
+            #action = torch.clamp(action, 0, 1)
             return action
         else:
             return self.forward(state)
 
+def stateProcessor(state, device = 'cpu'):
+    # given a list a dictions like { 'sensor': np.array, 'target': np.array}
+    # we want to get a diction like {'sensor': list of torch tensor, 'target': list of torch tensor}
+    nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, state)), device=device, dtype=torch.uint8)
 
+    stateList = [item['state'] for item in state if item is not None]
+    nonFinalState = torch.tensor(stateList, dtype=torch.float32, device=device)
+    return nonFinalState, nonFinalMask
 
-def plotPolicy(x, policy):
-    plt.plot(x, policy)
-    # for i in range(nbActions):
-    #     idx, idy = np.where(policy == i)
-    #     plt.plot(idx,idy, )
+configName = 'config.json'
+with open(configName ,'r') as f:
+    config = json.load(f)
 
-
-# first construct the neutral network
-
-
-env = HedgingSimulator()
+env = HedgingSimulator(config)
 N_S = env.stateDim
 N_A = env.nbActions
 
@@ -88,7 +89,7 @@ with open(configName ,'r') as f:
     config = json.load(f)
 
 
-nPeriods = config['nPeriods']
+nPeriods = config['episodeLength']
 
 netParameter = dict()
 netParameter['n_feature'] = N_S
@@ -116,83 +117,33 @@ criticOptimizers = [optim.Adam(criticNet.parameters(), lr=config['criticLearning
 actorNets = {'actor': actorNets, 'target': actorTargetNets}
 criticNets = {'critic': criticNets, 'target': criticTargetNets}
 optimizers = {'actor': actorOptimizers, 'critic':criticOptimizers}
-agent = DDPGAgent(config, actorNets, criticNets, env, optimizers, torch.nn.MSELoss(reduction='mean'), N_A)
 
-plotPolicyFlag = True
-N = 50
-if plotPolicyFlag:
-    for phiIdx in range(8):
-        phi = phiIdx * np.pi / 4.0
+timeIndexMap = {0:0, 1:0}
 
-        xSet = np.linspace(-4,4,N)
-        ySet = np.linspace(-4,4,N)
-        policy = np.zeros((N, N))
+agent = StackedDDPGAgent(config, actorNets, criticNets, env, optimizers, torch.nn.MSELoss(reduction='mean'), N_A, stateProcessor=stateProcessor ,timeIndexMap = timeIndexMap)
 
-        value = np.zeros((N, N))
-        for i, x in enumerate(xSet):
-            for j, y in enumerate(ySet):
-                distance = - np.array([x, y])
-                dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
-                dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
+S = np.linspace(0.5, 1.5, 101)
+result = []
+for s in S:
+    state = np.array([0.0, 0.0, s])
+    combinedState = {'state': state, 'timeStep': 0}
+
+    action = agent.select_action(agent.actorNets[0], combinedState, False)
+    result.append([s, action, action / s])
+
+np.savetxt("resultBeforeTrain.txt", np.array(result))
 
 
-                state = torch.tensor([dx, dy], dtype=torch.float32).unsqueeze(0)
-                action = agent.actorNet.select_action(state, noiseFlag = False)
-                value[i, j] = agent.criticNet.forward(state, action).item()
-                action = action.detach().numpy()
-                policy[i, j] = action
-
-        np.savetxt('StabilizerPolicyBeforeTrain'+'phiIdx'+ str(phiIdx) + '.txt', policy, fmt='%+.3f')
-        np.savetxt('StabilizerValueBeforeTrain'+'phiIdx'+ str(phiIdx) + '.txt', value, fmt='%+.3f')
 
 agent.train()
 
+S = np.linspace(0.5, 1.5, 101)
+result = []
+for s in S:
+    state = np.array([0.0, 0.0, s])
+    combinedState = {'state': state, 'timeStep': 0}
 
+    action = agent.select_action(agent.actorNets[0], combinedState, False)
+    result.append([s, action, action / s])
 
-def customPolicy(state):
-    x = state[0]
-    # move towards negative
-    if x > 0.1:
-        action = 2
-    # move towards positive
-    elif x < -0.1:
-        action = 1
-    # do not move
-    else:
-        action = 0
-    return action
-# storeMemory = ReplayMemory(100000)
-# agent.perform_on_policy(100, customPolicy, storeMemory)
-# storeMemory.write_to_text('performPolicyMemory.txt')
-# transitions = storeMemory.fetch_all_random()
-
-if plotPolicyFlag:
-    for phiIdx in range(8):
-        phi = phiIdx * np.pi / 4.0
-
-        xSet = np.linspace(-4,4,N)
-        ySet = np.linspace(-4,4,N)
-        policy = np.zeros((N, N))
-
-        value = np.zeros((N, N))
-        for i, x in enumerate(xSet):
-            for j, y in enumerate(ySet):
-                distance = - np.array([x, y])
-                dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
-                dy = distance[0] * math.sin(phi) - distance[1] * math.cos(phi)
-
-                state = torch.tensor([dx, dy], dtype=torch.float32).unsqueeze(0)
-                action = agent.actorNet.select_action(state, noiseFlag=False)
-                value[i, j] = agent.criticNet.forward(state, action).item()
-                action = action.detach().numpy()
-                policy[i, j] = action
-
-        np.savetxt('StabilizerPolicyAfterTrain' + 'phiIdx' + str(phiIdx) + '.txt', policy, fmt='%+.3f')
-        np.savetxt('StabilizerValueAfterTrain' + 'phiIdx' + str(phiIdx) + '.txt', value, fmt='%+.3f')
-
-
-#np.savetxt('StabilizerPolicyAfterTrain.txt', policy, fmt='%d')
-
-#plotPolicy(xSet, policy)
-
-
+np.savetxt("resultAfterTrain.txt", np.array(result))
