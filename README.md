@@ -32,3 +32,12 @@ PyTorch implementation of classical deep reinforcement learning algorithms
 ## Application examples:
 
 * Efficient Navigation of Active Particles in an Unseen Environment via Deep Reinforcement Learning [[Publication]](https://arxiv.org/abs/1906.10844)
+
+
+## Custom envs
+
+* 1D stablizer, 2D stabilizer, and multi-Dim stabilizer
+* maze with static obstacles and stchastic/deterministic agent
+* maze with dynamic obstacles and stchastic/deterministic agent
+* finanical portfolio engineering env (for hedging and investment)
+* colloidal assembly env
