@@ -63,9 +63,9 @@ class HedgingSimulator:
         else:
             return self.episodeLength - idx
 
-    def evolveStock(self, stockValue):
-        return stockValue * math.exp((self.ret_Stock - 0.5 * math.pow(self.vol, 2)) \
-                                     + np.random.normal() * self.vol )
+    def evolveStock(self, stockValue, nSample = 1):
+        return stockValue * np.exp((self.ret_Stock - 0.5 * math.pow(self.vol, 2)) \
+                                     + np.random.normal(0, 1, nSample) * self.vol )
 
     def step(self, action):
         # action means the amount of dollar value stocks to buy
@@ -115,3 +115,32 @@ class HedgingSimulator:
 
     def render(self, mode='human'):
         pass
+
+    def oneStepBenchmark(self, fileName):
+
+        S = np.linspace(0.5, 1.5, 51)
+        A = np.linspace(-2, 2, 101)
+        #S = [1.0]
+        #A = [-1.0, -0.5, 0.0, 0.5, 1.0]
+        cash = 0.0
+        numSamples = 10000
+        result = np.zeros((len(S), len(A)))
+        for i, s in enumerate(S):
+            stockPrice = s
+
+            for j, a in enumerate(A):
+                stockValue = 0.0
+                cash = 0.0
+                cash -= a  # reduce cash
+                stockValue += a  # increase stock
+
+                cash *= (1 + self.ret_Bond)
+                growthFactor = self.evolveStock(1.0, nSample = numSamples)
+                stockValueVec = stockValue * growthFactor
+                stockPriceVec = stockPrice * growthFactor
+                totalWealthVec = cash + stockValueVec + - np.maximum(stockPriceVec - self.optionStrike, 0.0)
+                rewardVec = (1 - np.exp(-totalWealthVec * self.riskAverse)) / self.rewardScale
+                rewardAvg = np.mean(rewardVec)
+                result[i, j] = rewardAvg
+
+        np.savetxt(fileName, result, fmt="%.3f")

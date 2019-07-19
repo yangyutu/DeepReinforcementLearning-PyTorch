@@ -1,0 +1,1403 @@
+/home/yangyutu/anaconda3/bin/python /home/yangyutu/Dropbox/pythonScripts/DeepReinforcementLearning-PyTorch/Example/SACExample/StabilizerOneD/SAC_StabilizerOneDContinuous.py
+episode index:0
+at step 0:
+{'stepCount': 1, 'initial state': array([4.16404928])}
+done in step count: 31
+reward sum = 0.038152042447694615
+running average episode reward sum: 0.038152042447694615
+{'stepCount': 32, 'initial state': array([4.16404928]), 'done_state': array([0.00544097])}
+episode index:1
+at step 0:
+{'stepCount': 1, 'initial state': array([1.80708396])}
+done in step count: 199
+reward sum = -0.225283988394313
+running average episode reward sum: -0.09356597297330918
+{'stepCount': 200, 'initial state': array([1.80708396])}
+episode index:2
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.1372294]), 'done_state': array([-0.42179677])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.2709560180177939
+{'stepCount': 1, 'initial state': array([-0.1372294]), 'done_state': array([-0.42179677])}
+episode index:3
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.5546031]), 'done_state': array([-0.02041597])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.4532170135133454
+{'stepCount': 1, 'initial state': array([-0.5546031]), 'done_state': array([-0.02041597])}
+episode index:4
+at step 0:
+{'stepCount': 1, 'initial state': array([2.57503072])}
+done in step count: 5
+reward sum = 0.5904900000000001
+running average episode reward sum: 0.48067161081067633
+{'stepCount': 6, 'initial state': array([2.57503072]), 'done_state': array([-0.11191557])}
+episode index:5
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.19510123])}
+done in step count: 165
+reward sum = -3.874200935805985
+running average episode reward sum: -0.24514048029210053
+{'stepCount': 166, 'initial state': array([-1.19510123]), 'done_state': array([0.14179332])}
+episode index:6
+at step 0:
+{'stepCount': 1, 'initial state': array([1.75782393])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: -0.08154898310751472
+{'stepCount': 2, 'initial state': array([1.75782393]), 'done_state': array([0.03585574])}
+episode index:7
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.06945756])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.019769639780924622
+{'stepCount': 4, 'initial state': array([-0.06945756]), 'done_state': array([-0.33039741])}
+episode index:8
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.56318088]), 'done_state': array([0.43071429])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.12868412424971076
+{'stepCount': 1, 'initial state': array([-0.56318088]), 'done_state': array([0.43071429])}
+episode index:9
+at step 0:
+{'stepCount': 1, 'initial state': array([1.46445259])}
+done in step count: 6
+reward sum = 0.531441
+running average episode reward sum: 0.16895981182473968
+{'stepCount': 7, 'initial state': array([1.46445259]), 'done_state': array([-0.12184215])}
+episode index:10
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.29418772])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.23541801074976335
+{'stepCount': 2, 'initial state': array([-1.29418772]), 'done_state': array([0.39965637])}
+episode index:11
+at step 0:
+{'stepCount': 1, 'initial state': array([4.65001656])}
+done in step count: 96
+reward sum = -4.370989617793464
+running average episode reward sum: -0.14844929162883894
+{'stepCount': 97, 'initial state': array([4.65001656]), 'done_state': array([0.37239713])}
+episode index:12
+at step 0:
+{'stepCount': 1, 'initial state': array([2.94602518])}
+done in step count: 17
+reward sum = 0.16677181699666577
+running average episode reward sum: -0.12420151404226167
+{'stepCount': 18, 'initial state': array([2.94602518]), 'done_state': array([0.20312601])}
+episode index:13
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.26584077])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: -0.057472834467814406
+{'stepCount': 3, 'initial state': array([-3.26584077]), 'done_state': array([-0.21783611])}
+episode index:14
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.33405034])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.006358687830039892
+{'stepCount': 2, 'initial state': array([-0.33405034]), 'done_state': array([-0.29032357])}
+episode index:15
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.85637404])}
+done in step count: 5
+reward sum = 0.5904900000000001
+running average episode reward sum: 0.0428668948406624
+{'stepCount': 6, 'initial state': array([-3.85637404]), 'done_state': array([0.39360232])}
+episode index:16
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.85217936]), 'done_state': array([0.05321958])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.09916884220297638
+{'stepCount': 1, 'initial state': array([-0.85217936]), 'done_state': array([0.05321958])}
+episode index:17
+at step 0:
+{'stepCount': 1, 'initial state': array([3.50785737])}
+done in step count: 12
+reward sum = 0.2824295364810001
+running average episode reward sum: 0.10934999188508882
+{'stepCount': 13, 'initial state': array([3.50785737]), 'done_state': array([-0.2413406])}
+episode index:18
+at step 0:
+{'stepCount': 1, 'initial state': array([0.84987694])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.1381263081016631
+{'stepCount': 5, 'initial state': array([0.84987694]), 'done_state': array([-0.06124017])}
+episode index:19
+at step 0:
+{'stepCount': 1, 'initial state': array([4.28850428])}
+done in step count: 13
+reward sum = 0.2541865828329001
+running average episode reward sum: 0.14392932183822493
+{'stepCount': 14, 'initial state': array([4.28850428]), 'done_state': array([0.19401474])}
+episode index:20
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.35317297]), 'done_state': array([-0.37804028])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.1846945922268809
+{'stepCount': 1, 'initial state': array([-1.35317297]), 'done_state': array([-0.37804028])}
+episode index:21
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.42121571]), 'done_state': array([-0.4703967])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.22175392894384086
+{'stepCount': 1, 'initial state': array([-1.42121571]), 'done_state': array([-0.4703967])}
+episode index:22
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.59419991]), 'done_state': array([0.38381718])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.2555907146419347
+{'stepCount': 1, 'initial state': array([-0.59419991]), 'done_state': array([0.38381718])}
+episode index:23
+at step 0:
+{'stepCount': 1, 'initial state': array([4.80834029])}
+done in step count: 12
+reward sum = -0.7175704635189999
+running average episode reward sum: 0.21504233221856248
+{'stepCount': 13, 'initial state': array([4.80834029]), 'done_state': array([-0.10176458])}
+episode index:24
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.83840473])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.24244063892981998
+{'stepCount': 2, 'initial state': array([-1.83840473]), 'done_state': array([0.21583831])}
+episode index:25
+at step 0:
+{'stepCount': 1, 'initial state': array([3.29362563])}
+done in step count: 5
+reward sum = 0.5904900000000001
+running average episode reward sum: 0.2558271528171346
+{'stepCount': 6, 'initial state': array([3.29362563]), 'done_state': array([0.38714289])}
+episode index:26
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.63622041])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.27968540641649997
+{'stepCount': 2, 'initial state': array([-0.63622041]), 'done_state': array([-0.09169285])}
+episode index:27
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.14950152])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.2986252133301964
+{'stepCount': 3, 'initial state': array([-3.14950152]), 'done_state': array([-0.3395415])}
+episode index:28
+at step 0:
+{'stepCount': 1, 'initial state': array([0.55414917]), 'done_state': array([-0.40693437])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.32281055080156895
+{'stepCount': 1, 'initial state': array([0.55414917]), 'done_state': array([-0.40693437])}
+episode index:29
+at step 0:
+{'stepCount': 1, 'initial state': array([2.64725847])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.33905019910818335
+{'stepCount': 3, 'initial state': array([2.64725847]), 'done_state': array([0.0441026])}
+episode index:30
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.63963131])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.35714535397566133
+{'stepCount': 2, 'initial state': array([-1.63963131]), 'done_state': array([-0.3952652])}
+episode index:31
+at step 0:
+{'stepCount': 1, 'initial state': array([2.33942615])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.3712970616639219
+{'stepCount': 3, 'initial state': array([2.33942615]), 'done_state': array([-0.12438968])}
+episode index:32
+at step 0:
+{'stepCount': 1, 'initial state': array([2.88778303])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.3845910900983485
+{'stepCount': 3, 'initial state': array([2.88778303]), 'done_state': array([-0.07294604])}
+episode index:33
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.77558715])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.3947207639189853
+{'stepCount': 4, 'initial state': array([-3.77558715]), 'done_state': array([0.24401087])}
+episode index:34
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.5709947])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.40658588494987147
+{'stepCount': 3, 'initial state': array([-1.5709947]), 'done_state': array([0.42649709])}
+episode index:35
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.75813067])}
+done in step count: 5
+reward sum = 0.5904900000000001
+running average episode reward sum: 0.4116943325901528
+{'stepCount': 6, 'initial state': array([-3.75813067]), 'done_state': array([-0.05420013])}
+episode index:36
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.10802755])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.42489178306068925
+{'stepCount': 2, 'initial state': array([-2.10802755]), 'done_state': array([-0.20493272])}
+episode index:37
+at step 0:
+{'stepCount': 1, 'initial state': array([2.71887968])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.4350262098222501
+{'stepCount': 3, 'initial state': array([2.71887968]), 'done_state': array([-0.07081552])}
+episode index:38
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.45185026])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.4446409223909103
+{'stepCount': 3, 'initial state': array([-3.45185026]), 'done_state': array([-0.47992046])}
+episode index:39
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.76136746])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.4560248993311375
+{'stepCount': 2, 'initial state': array([-0.76136746]), 'done_state': array([0.42408197])}
+episode index:40
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.5047916]), 'done_state': array([0.49442331])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.46929258471330487
+{'stepCount': 1, 'initial state': array([-0.5047916]), 'done_state': array([0.49442331])}
+episode index:41
+at step 0:
+{'stepCount': 1, 'initial state': array([2.01802746])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.47954752317251187
+{'stepCount': 2, 'initial state': array([2.01802746]), 'done_state': array([0.01883413])}
+episode index:42
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.90128424])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.4836533947266395
+{'stepCount': 5, 'initial state': array([-4.90128424]), 'done_state': array([-0.41579712])}
+episode index:43
+at step 0:
+{'stepCount': 1, 'initial state': array([4.14790582])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.48922945393739764
+{'stepCount': 4, 'initial state': array([4.14790582]), 'done_state': array([0.20063067])}
+episode index:44
+at step 0:
+{'stepCount': 1, 'initial state': array([3.32191748])}
+done in step count: 6
+reward sum = 0.531441
+running average episode reward sum: 0.49016748829434437
+{'stepCount': 7, 'initial state': array([3.32191748]), 'done_state': array([0.47826902])}
+episode index:45
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.62381554])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.49535949941838037
+{'stepCount': 4, 'initial state': array([-3.62381554]), 'done_state': array([-0.30048277])}
+episode index:46
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.49366802])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.5039688717711808
+{'stepCount': 2, 'initial state': array([-2.49366802]), 'done_state': array([-0.49689223])}
+episode index:47
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.37423707])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.5086570202759478
+{'stepCount': 4, 'initial state': array([-4.37423707]), 'done_state': array([-0.39572151])}
+episode index:48
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.23029428])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.5131538157805203
+{'stepCount': 4, 'initial state': array([-4.23029428]), 'done_state': array([-0.36813766])}
+episode index:49
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.30102437])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.5190907394649099
+{'stepCount': 3, 'initial state': array([-3.30102437]), 'done_state': array([-0.35438837])}
+episode index:50
+at step 0:
+{'stepCount': 1, 'initial state': array([4.60383767])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.5217771955538332
+{'stepCount': 5, 'initial state': array([4.60383767]), 'done_state': array([0.38998746])}
+episode index:51
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.83798558])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.5273199417931825
+{'stepCount': 3, 'initial state': array([-2.83798558]), 'done_state': array([0.1427102])}
+episode index:52
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.41206192])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.534351641004632
+{'stepCount': 2, 'initial state': array([-2.41206192]), 'done_state': array([-0.36518067])}
+episode index:53
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.50411234])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.5394562402452868
+{'stepCount': 3, 'initial state': array([-3.50411234]), 'done_state': array([-0.4888425])}
+episode index:54
+at step 0:
+{'stepCount': 1, 'initial state': array([2.32443053])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.5460115813317361
+{'stepCount': 2, 'initial state': array([2.32443053]), 'done_state': array([0.35219418])}
+episode index:55
+at step 0:
+{'stepCount': 1, 'initial state': array([1.96924634])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.5523328030936694
+{'stepCount': 2, 'initial state': array([1.96924634]), 'done_state': array([-0.0371407])}
+episode index:56
+at step 0:
+{'stepCount': 1, 'initial state': array([2.79623658])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.5568532802323769
+{'stepCount': 3, 'initial state': array([2.79623658]), 'done_state': array([0.18760927])}
+episode index:57
+at step 0:
+{'stepCount': 1, 'initial state': array([0.47484764])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.5627696029869911
+{'stepCount': 2, 'initial state': array([0.47484764]), 'done_state': array([0.38615062])}
+episode index:58
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.82306883])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.5655870673431438
+{'stepCount': 4, 'initial state': array([-3.82306883]), 'done_state': array([0.02064146])}
+episode index:59
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.57228301])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.5696606162207581
+{'stepCount': 3, 'initial state': array([-2.57228301]), 'done_state': array([0.32459879])}
+episode index:60
+at step 0:
+{'stepCount': 1, 'initial state': array([4.33630549])}
+done in step count: 5
+reward sum = 0.5904900000000001
+running average episode reward sum: 0.5700020815286145
+{'stepCount': 6, 'initial state': array([4.33630549]), 'done_state': array([0.19669785])}
+episode index:61
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.16699728])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.5753246286007336
+{'stepCount': 2, 'initial state': array([-2.16699728]), 'done_state': array([-0.18580052])}
+episode index:62
+at step 0:
+{'stepCount': 1, 'initial state': array([3.11970979])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.5790496344959601
+{'stepCount': 3, 'initial state': array([3.11970979]), 'done_state': array([-0.000683])}
+episode index:63
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.89130262])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.5813926089569608
+{'stepCount': 4, 'initial state': array([-3.89130262]), 'done_state': array([0.13727464])}
+episode index:64
+at step 0:
+{'stepCount': 1, 'initial state': array([3.23350841])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.5849096457422384
+{'stepCount': 3, 'initial state': array([3.23350841]), 'done_state': array([0.28809469])}
+episode index:65
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.63634303])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.587092832927962
+{'stepCount': 4, 'initial state': array([-3.63634303]), 'done_state': array([0.29489423])}
+episode index:66
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.24483926])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.5892108503469476
+{'stepCount': 4, 'initial state': array([-4.24483926]), 'done_state': array([-0.16534946])}
+episode index:67
+at step 0:
+{'stepCount': 1, 'initial state': array([4.84511075])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.5901945143124337
+{'stepCount': 5, 'initial state': array([4.84511075]), 'done_state': array([-0.13861032])}
+episode index:68
+at step 0:
+{'stepCount': 1, 'initial state': array([1.1692055]), 'done_state': array([0.17235467])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.5961337242499347
+{'stepCount': 1, 'initial state': array([1.1692055]), 'done_state': array([0.17235467])}
+episode index:69
+at step 0:
+{'stepCount': 1, 'initial state': array([3.33760599])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.59918895676065
+{'stepCount': 3, 'initial state': array([3.33760599]), 'done_state': array([0.34360015])}
+episode index:70
+at step 0:
+{'stepCount': 1, 'initial state': array([3.45285905])}
+done in step count: 6
+reward sum = 0.531441
+running average episode reward sum: 0.5982347601865564
+{'stepCount': 7, 'initial state': array([3.45285905]), 'done_state': array([0.44907959])}
+episode index:71
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.55364455])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.5990384440728542
+{'stepCount': 5, 'initial state': array([-4.55364455]), 'done_state': array([0.32218507])}
+episode index:72
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.4701631])}
+done in step count: 9
+reward sum = 0.3874204890000001
+running average episode reward sum: 0.5961395679759658
+{'stepCount': 10, 'initial state': array([-4.4701631]), 'done_state': array([-0.07755229])}
+episode index:73
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.48384491])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.5990295738141285
+{'stepCount': 3, 'initial state': array([-3.48384491]), 'done_state': array([-0.41474005])}
+episode index:74
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.2338994])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.60304251282994
+{'stepCount': 2, 'initial state': array([-2.2338994]), 'done_state': array([-0.19489122])}
+episode index:75
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.11911447])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.6057656376611251
+{'stepCount': 3, 'initial state': array([-3.11911447]), 'done_state': array([-0.18467318])}
+episode index:76
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.91325847])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.6073660839252664
+{'stepCount': 4, 'initial state': array([-3.91325847]), 'done_state': array([0.12738781])}
+episode index:77
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.68174591]), 'done_state': array([0.34302841])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6123998520800706
+{'stepCount': 1, 'initial state': array([-0.68174591]), 'done_state': array([0.34302841])}
+episode index:78
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.49763567]), 'done_state': array([-0.49796641])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6173061830663988
+{'stepCount': 1, 'initial state': array([-1.49763567]), 'done_state': array([-0.49796641])}
+episode index:79
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.70100684])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.6197148557780688
+{'stepCount': 3, 'initial state': array([-2.70100684]), 'done_state': array([0.33015201])}
+episode index:80
+at step 0:
+{'stepCount': 1, 'initial state': array([0.68251212]), 'done_state': array([-0.32770176])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6244097341017965
+{'stepCount': 1, 'initial state': array([0.68251212]), 'done_state': array([-0.32770176])}
+episode index:81
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.25437238])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.627770591002994
+{'stepCount': 2, 'initial state': array([-2.25437238]), 'done_state': array([-0.32822484])}
+episode index:82
+at step 0:
+{'stepCount': 1, 'initial state': array([3.50794878])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.6289902224366929
+{'stepCount': 4, 'initial state': array([3.50794878]), 'done_state': array([0.05357319])}
+episode index:83
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.66326748])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.6322165293124465
+{'stepCount': 2, 'initial state': array([-1.66326748]), 'done_state': array([-0.31827262])}
+episode index:84
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.94879977])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.633355158379359
+{'stepCount': 4, 'initial state': array([-3.94879977]), 'done_state': array([0.14213993])}
+episode index:85
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.64144152])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.6344673077005292
+{'stepCount': 4, 'initial state': array([-2.64144152]), 'done_state': array([-0.20191499])}
+episode index:86
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.10606774])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.6364849248533967
+{'stepCount': 3, 'initial state': array([-3.10606774]), 'done_state': array([-0.16172663])}
+episode index:87
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.39824973])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.639479414343699
+{'stepCount': 2, 'initial state': array([-2.39824973]), 'done_state': array([-0.43434959])}
+episode index:88
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.31418575])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.6424066119353429
+{'stepCount': 2, 'initial state': array([-0.31418575]), 'done_state': array([-0.31534819])}
+episode index:89
+at step 0:
+{'stepCount': 1, 'initial state': array([2.02788538])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.6452687606916169
+{'stepCount': 2, 'initial state': array([2.02788538]), 'done_state': array([-0.00743489])}
+episode index:90
+at step 0:
+{'stepCount': 1, 'initial state': array([0.22027113])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.6461888842005001
+{'stepCount': 4, 'initial state': array([0.22027113]), 'done_state': array([0.25484597])}
+episode index:91
+at step 0:
+{'stepCount': 1, 'initial state': array([0.09684763]), 'done_state': array([-0.0845941])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6500346571983208
+{'stepCount': 1, 'initial state': array([0.09684763]), 'done_state': array([-0.0845941])}
+episode index:92
+at step 0:
+{'stepCount': 1, 'initial state': array([1.02960586]), 'done_state': array([0.08921138])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6537977254004893
+{'stepCount': 1, 'initial state': array([1.02960586]), 'done_state': array([0.08921138])}
+episode index:93
+at step 0:
+{'stepCount': 1, 'initial state': array([3.65901836])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.6545977495983565
+{'stepCount': 4, 'initial state': array([3.65901836]), 'done_state': array([-0.38394961])}
+episode index:94
+at step 0:
+{'stepCount': 1, 'initial state': array([0.84500647]), 'done_state': array([-0.13877318])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6582335627604791
+{'stepCount': 1, 'initial state': array([0.84500647]), 'done_state': array([-0.13877318])}
+episode index:95
+at step 0:
+{'stepCount': 1, 'initial state': array([2.95811392])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.6598144631483908
+{'stepCount': 3, 'initial state': array([2.95811392]), 'done_state': array([-0.00131695])}
+episode index:96
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.55303116]), 'done_state': array([0.40365708])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6633215305386135
+{'stepCount': 1, 'initial state': array([-0.55303116]), 'done_state': array([0.40365708])}
+episode index:97
+at step 0:
+{'stepCount': 1, 'initial state': array([1.79241291])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.6648182496147502
+{'stepCount': 3, 'initial state': array([1.79241291]), 'done_state': array([-0.43902483])}
+episode index:98
+at step 0:
+{'stepCount': 1, 'initial state': array([0.3564148])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.6671938228509648
+{'stepCount': 2, 'initial state': array([0.3564148]), 'done_state': array([0.39948085])}
+episode index:99
+at step 0:
+{'stepCount': 1, 'initial state': array([0.2038873])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.6695218846224553
+{'stepCount': 2, 'initial state': array([0.2038873]), 'done_state': array([0.20943315])}
+episode index:100
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.37914836])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.670912757051936
+{'stepCount': 3, 'initial state': array([-3.37914836]), 'done_state': array([-0.31043728])}
+episode index:101
+at step 0:
+{'stepCount': 1, 'initial state': array([4.69896081])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.6707675339435836
+{'stepCount': 5, 'initial state': array([4.69896081]), 'done_state': array([-0.07555388])}
+episode index:102
+at step 0:
+{'stepCount': 1, 'initial state': array([3.57694292])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.6706251307014128
+{'stepCount': 5, 'initial state': array([3.57694292]), 'done_state': array([-0.44541287])}
+episode index:103
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.5868703])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.6711864275215915
+{'stepCount': 4, 'initial state': array([-4.5868703]), 'done_state': array([-0.49465521])}
+episode index:104
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.79765616])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.6725084615451955
+{'stepCount': 3, 'initial state': array([-2.79765616]), 'done_state': array([0.1993869])}
+episode index:105
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.79182426])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.6746546081343918
+{'stepCount': 2, 'initial state': array([-1.79182426]), 'done_state': array([0.17257411])}
+episode index:106
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.28821234]), 'done_state': array([-0.24161217])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6776952192733227
+{'stepCount': 1, 'initial state': array([-1.28821234]), 'done_state': array([-0.24161217])}
+episode index:107
+at step 0:
+{'stepCount': 1, 'initial state': array([2.22841309])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.6797535968726438
+{'stepCount': 2, 'initial state': array([2.22841309]), 'done_state': array([0.24356228])}
+episode index:108
+at step 0:
+{'stepCount': 1, 'initial state': array([4.60884574])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.6795365913967479
+{'stepCount': 5, 'initial state': array([4.60884574]), 'done_state': array([-0.48952782])}
+episode index:109
+at step 0:
+{'stepCount': 1, 'initial state': array([2.2369813])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.6815408042022322
+{'stepCount': 2, 'initial state': array([2.2369813]), 'done_state': array([0.21008943])}
+episode index:110
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.71384128]), 'done_state': array([-0.13712042])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.684409805966176
+{'stepCount': 1, 'initial state': array([-0.71384128]), 'done_state': array([-0.13712042])}
+episode index:111
+at step 0:
+{'stepCount': 1, 'initial state': array([0.9297328])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.6863347184129066
+{'stepCount': 2, 'initial state': array([0.9297328]), 'done_state': array([-0.04944687])}
+episode index:112
+at step 0:
+{'stepCount': 1, 'initial state': array([0.6437075]), 'done_state': array([-0.28040938])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6891105173650048
+{'stepCount': 1, 'initial state': array([0.6437075]), 'done_state': array([-0.28040938])}
+episode index:113
+at step 0:
+{'stepCount': 1, 'initial state': array([0.94938305]), 'done_state': array([-0.00759185])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6918376180898732
+{'stepCount': 1, 'initial state': array([0.94938305]), 'done_state': array([-0.00759185])}
+episode index:114
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.65497143]), 'done_state': array([-0.03473692])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6945172909760482
+{'stepCount': 1, 'initial state': array([-0.65497143]), 'done_state': array([-0.03473692])}
+episode index:115
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.3438224])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.6948145557090133
+{'stepCount': 4, 'initial state': array([-4.3438224]), 'done_state': array([-0.47991034])}
+episode index:116
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.93869045])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.6965682774550901
+{'stepCount': 2, 'initial state': array([-1.93869045]), 'done_state': array([0.1146164])}
+episode index:117
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.29007762]), 'done_state': array([-0.39687132])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.6991397327308945
+{'stepCount': 1, 'initial state': array([-0.29007762]), 'done_state': array([-0.39687132])}
+episode index:118
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.2848517])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.6993906593466013
+{'stepCount': 4, 'initial state': array([-4.2848517]), 'done_state': array([-0.30389135])}
+episode index:119
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.83732479])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7010624038520462
+{'stepCount': 2, 'initial state': array([-1.83732479]), 'done_state': array([0.09343417])}
+episode index:120
+at step 0:
+{'stepCount': 1, 'initial state': array([3.18985477])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.7006908137375665
+{'stepCount': 5, 'initial state': array([3.18985477]), 'done_state': array([0.06169181])}
+episode index:121
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.69717427])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.7003253152643077
+{'stepCount': 5, 'initial state': array([-3.69717427]), 'done_state': array([-0.10129539])}
+episode index:122
+at step 0:
+{'stepCount': 1, 'initial state': array([3.62386611])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.700558442782484
+{'stepCount': 4, 'initial state': array([3.62386611]), 'done_state': array([-0.22771649])}
+episode index:123
+at step 0:
+{'stepCount': 1, 'initial state': array([3.76065491])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7007878101793995
+{'stepCount': 4, 'initial state': array([3.76065491]), 'done_state': array([-0.34389795])}
+episode index:124
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.56128351])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7010135076979643
+{'stepCount': 4, 'initial state': array([-2.56128351]), 'done_state': array([-0.24526748])}
+episode index:125
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.15645126])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7025927655733774
+{'stepCount': 2, 'initial state': array([-0.15645126]), 'done_state': array([-0.04411129])}
+episode index:126
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.65328367])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7028006965531145
+{'stepCount': 4, 'initial state': array([-3.65328367]), 'done_state': array([0.32027162])}
+episode index:127
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.01799751])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7036381911112933
+{'stepCount': 3, 'initial state': array([-3.01799751]), 'done_state': array([-0.01909018])}
+episode index:128
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.79225852])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.7032696780019034
+{'stepCount': 5, 'initial state': array([-4.79225852]), 'done_state': array([0.2036228])}
+episode index:129
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.6451232])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7034676035557349
+{'stepCount': 4, 'initial state': array([-3.6451232]), 'done_state': array([0.11525335])}
+episode index:130
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.19635687])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7042808279560728
+{'stepCount': 3, 'initial state': array([-3.19635687]), 'done_state': array([-0.1957325])}
+episode index:131
+at step 0:
+{'stepCount': 1, 'initial state': array([4.55680538])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.7039158216836783
+{'stepCount': 5, 'initial state': array([4.55680538]), 'done_state': array([-0.06845262])}
+episode index:132
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.41237153])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7053901388138762
+{'stepCount': 2, 'initial state': array([-0.41237153]), 'done_state': array([-0.31334926])}
+episode index:133
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.53821549]), 'done_state': array([0.46202319])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.707588719867504
+{'stepCount': 1, 'initial state': array([-0.53821549]), 'done_state': array([0.46202319])}
+episode index:134
+at step 0:
+{'stepCount': 1, 'initial state': array([2.69632097])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7077473219425596
+{'stepCount': 4, 'initial state': array([2.69632097]), 'done_state': array([0.00018524])}
+episode index:135
+at step 0:
+{'stepCount': 1, 'initial state': array([0.47035166])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.709160944575335
+{'stepCount': 2, 'initial state': array([0.47035166]), 'done_state': array([-0.06867812])}
+episode index:136
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.52088834]), 'done_state': array([0.36123787])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7112838573886536
+{'stepCount': 1, 'initial state': array([-0.52088834]), 'done_state': array([0.36123787])}
+episode index:137
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.08392916])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7119991917554025
+{'stepCount': 3, 'initial state': array([-3.08392916]), 'done_state': array([-0.19224983])}
+episode index:138
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.24816226])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7133517155557234
+{'stepCount': 2, 'initial state': array([-2.24816226]), 'done_state': array([-0.22212403])}
+episode index:139
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.19665929])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7140420604446112
+{'stepCount': 3, 'initial state': array([-3.19665929]), 'done_state': array([-0.39216615])}
+episode index:140
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.30657663]), 'done_state': array([-0.3153047])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7160701309379117
+{'stepCount': 1, 'initial state': array([-1.30657663]), 'done_state': array([-0.3153047])}
+episode index:141
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.16740308]), 'done_state': array([-0.2007592])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7180696370580674
+{'stepCount': 1, 'initial state': array([-1.16740308]), 'done_state': array([-0.2007592])}
+episode index:142
+at step 0:
+{'stepCount': 1, 'initial state': array([2.9888085])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.71871250672899
+{'stepCount': 3, 'initial state': array([2.9888085]), 'done_state': array([-0.02877121])}
+episode index:143
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.4360893]), 'done_state': array([-0.47874667])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7206658920989276
+{'stepCount': 1, 'initial state': array([-1.4360893]), 'done_state': array([-0.47874667])}
+episode index:144
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.1385496])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7219026790499695
+{'stepCount': 2, 'initial state': array([-2.1385496]), 'done_state': array([-0.18360804])}
+episode index:145
+at step 0:
+{'stepCount': 1, 'initial state': array([1.33109415]), 'done_state': array([0.30276474])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7238074552208601
+{'stepCount': 1, 'initial state': array([1.33109415]), 'done_state': array([0.30276474])}
+episode index:146
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.18779643])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7250060439608543
+{'stepCount': 2, 'initial state': array([-2.18779643]), 'done_state': array([-0.1617613])}
+episode index:147
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.37429076])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7261884355557134
+{'stepCount': 2, 'initial state': array([-2.37429076]), 'done_state': array([-0.34887893])}
+episode index:148
+at step 0:
+{'stepCount': 1, 'initial state': array([0.29110479]), 'done_state': array([-0.0758397])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7280260970620509
+{'stepCount': 1, 'initial state': array([0.29110479]), 'done_state': array([-0.0758397])}
+episode index:149
+at step 0:
+{'stepCount': 1, 'initial state': array([4.30238728])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7280325897483039
+{'stepCount': 4, 'initial state': array([4.30238728]), 'done_state': array([0.38819415])}
+episode index:150
+at step 0:
+{'stepCount': 1, 'initial state': array([4.35064])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.7275562149817587
+{'stepCount': 5, 'initial state': array([4.35064]), 'done_state': array([-0.28261228])}
+episode index:151
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.29311176])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.727565713567405
+{'stepCount': 4, 'initial state': array([-4.29311176]), 'done_state': array([-0.24572162])}
+episode index:152
+at step 0:
+{'stepCount': 1, 'initial state': array([4.14458226])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7275750879885331
+{'stepCount': 4, 'initial state': array([4.14458226]), 'done_state': array([0.1420241])}
+episode index:153
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.37932139])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.728694730274322
+{'stepCount': 2, 'initial state': array([-0.37932139]), 'done_state': array([-0.29267001])}
+episode index:154
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.34335783])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7297999255628748
+{'stepCount': 2, 'initial state': array([-2.34335783]), 'done_state': array([-0.35465119])}
+episode index:155
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.59369171])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7303140286041384
+{'stepCount': 3, 'initial state': array([-2.59369171]), 'done_state': array([0.43322664])}
+episode index:156
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.33394064])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7303056589951948
+{'stepCount': 4, 'initial state': array([-4.33394064]), 'done_state': array([-0.41047205])}
+episode index:157
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.82847117]), 'done_state': array([0.15035068])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.732012585204086
+{'stepCount': 1, 'initial state': array([-0.82847117]), 'done_state': array([0.15035068])}
+episode index:158
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.41788189])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7319936381273308
+{'stepCount': 4, 'initial state': array([-4.41788189]), 'done_state': array([-0.36913047])}
+episode index:159
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.3696649]), 'done_state': array([0.48134252])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.733668677889035
+{'stepCount': 1, 'initial state': array([-0.3696649]), 'done_state': array([0.48134252])}
+episode index:160
+at step 0:
+{'stepCount': 1, 'initial state': array([-4.24411272])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7336396798897242
+{'stepCount': 4, 'initial state': array([-4.24411272]), 'done_state': array([-0.2080707])}
+episode index:161
+at step 0:
+{'stepCount': 1, 'initial state': array([3.82227887])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7336110398904049
+{'stepCount': 4, 'initial state': array([3.82227887]), 'done_state': array([-0.11737378])}
+episode index:162
+at step 0:
+{'stepCount': 1, 'initial state': array([4.93069175])}
+done in step count: 5
+reward sum = 0.5904900000000001
+running average episode reward sum: 0.7327329967008932
+{'stepCount': 6, 'initial state': array([4.93069175]), 'done_state': array([0.17288238])}
+episode index:163
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.36707149]), 'done_state': array([-0.40183081])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7343626735502781
+{'stepCount': 1, 'initial state': array([-1.36707149]), 'done_state': array([-0.40183081])}
+episode index:164
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.20355091])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7343301724984581
+{'stepCount': 4, 'initial state': array([-3.20355091]), 'done_state': array([0.10294143])}
+episode index:165
+at step 0:
+{'stepCount': 1, 'initial state': array([1.40494902]), 'done_state': array([0.36539267])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7359305931460577
+{'stepCount': 1, 'initial state': array([1.40494902]), 'done_state': array([0.36539267])}
+episode index:166
+at step 0:
+{'stepCount': 1, 'initial state': array([2.3770981])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7358890925882969
+{'stepCount': 4, 'initial state': array([2.3770981]), 'done_state': array([-0.35739368])}
+episode index:167
+at step 0:
+{'stepCount': 1, 'initial state': array([3.7698476])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7358480860847951
+{'stepCount': 4, 'initial state': array([3.7698476]), 'done_state': array([-0.24705149])}
+episode index:168
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.73241745])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7358075648653585
+{'stepCount': 4, 'initial state': array([-1.73241745]), 'done_state': array([0.03859121])}
+episode index:169
+at step 0:
+{'stepCount': 1, 'initial state': array([2.41519706])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7367734027190916
+{'stepCount': 2, 'initial state': array([2.41519706]), 'done_state': array([0.44037124])}
+episode index:170
+at step 0:
+{'stepCount': 1, 'initial state': array([0.91567352]), 'done_state': array([-0.11830923])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7383127395452957
+{'stepCount': 1, 'initial state': array([0.91567352]), 'done_state': array([-0.11830923])}
+episode index:171
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.21692525])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7387295259432882
+{'stepCount': 3, 'initial state': array([-3.21692525]), 'done_state': array([-0.30355665])}
+episode index:172
+at step 0:
+{'stepCount': 1, 'initial state': array([-3.53609029])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7391414940014195
+{'stepCount': 3, 'initial state': array([-3.53609029]), 'done_state': array([-0.44901843])}
+episode index:173
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.24296964]), 'done_state': array([-0.20852576])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7406406808175034
+{'stepCount': 1, 'initial state': array([-1.24296964]), 'done_state': array([-0.20852576])}
+episode index:174
+at step 0:
+{'stepCount': 1, 'initial state': array([2.24014088])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7415513054985463
+{'stepCount': 2, 'initial state': array([2.24014088]), 'done_state': array([0.21309005])}
+episode index:175
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.65654875]), 'done_state': array([0.36185815])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7430197639900318
+{'stepCount': 1, 'initial state': array([-0.65654875]), 'done_state': array([0.36185815])}
+episode index:176
+at step 0:
+{'stepCount': 1, 'initial state': array([1.48865268])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7433981834025175
+{'stepCount': 3, 'initial state': array([1.48865268]), 'done_state': array([0.43397507])}
+episode index:177
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.61902622])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7433172947317169
+{'stepCount': 4, 'initial state': array([-2.61902622]), 'done_state': array([-0.41805439])}
+episode index:178
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.83092962])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.743689823811428
+{'stepCount': 3, 'initial state': array([-2.83092962]), 'done_state': array([0.11605467])}
+episode index:179
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.59175927])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7445582136791423
+{'stepCount': 2, 'initial state': array([-1.59175927]), 'done_state': array([0.44141906])}
+episode index:180
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.86779756])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7454170080787051
+{'stepCount': 2, 'initial state': array([-1.86779756]), 'done_state': array([-0.33896711])}
+episode index:181
+at step 0:
+{'stepCount': 1, 'initial state': array([4.89907806])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.7449262552870639
+{'stepCount': 5, 'initial state': array([4.89907806]), 'done_state': array([-0.07275104])}
+episode index:182
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.39915229])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7457736527991565
+{'stepCount': 2, 'initial state': array([-2.39915229]), 'done_state': array([-0.38194463])}
+episode index:183
+at step 0:
+{'stepCount': 1, 'initial state': array([3.92529952])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7456824916426394
+{'stepCount': 4, 'initial state': array([3.92529952]), 'done_state': array([0.04202111])}
+episode index:184
+at step 0:
+{'stepCount': 1, 'initial state': array([1.62667961])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.746516640336463
+{'stepCount': 2, 'initial state': array([1.62667961]), 'done_state': array([-0.37949453])}
+episode index:185
+at step 0:
+{'stepCount': 1, 'initial state': array([2.90156811])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7468579487217508
+{'stepCount': 3, 'initial state': array([2.90156811]), 'done_state': array([-0.09445255])}
+episode index:186
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.87676793])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7471956067499769
+{'stepCount': 3, 'initial state': array([-2.87676793]), 'done_state': array([0.06349874])}
+episode index:187
+at step 0:
+{'stepCount': 1, 'initial state': array([3.02809516])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7475296726715195
+{'stepCount': 3, 'initial state': array([3.02809516]), 'done_state': array([0.07977652])}
+episode index:188
+at step 0:
+{'stepCount': 1, 'initial state': array([2.27220882])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7483363939801358
+{'stepCount': 2, 'initial state': array([2.27220882]), 'done_state': array([0.25854064])}
+episode index:189
+at step 0:
+{'stepCount': 1, 'initial state': array([4.92883771])}
+done in step count: 4
+reward sum = 0.6561
+running average episode reward sum: 0.7478509392749773
+{'stepCount': 5, 'initial state': array([4.92883771]), 'done_state': array([0.03203694])}
+episode index:190
+at step 0:
+{'stepCount': 1, 'initial state': array([2.82115864])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7481763270274643
+{'stepCount': 3, 'initial state': array([2.82115864]), 'done_state': array([-0.20057005])}
+episode index:191
+at step 0:
+{'stepCount': 1, 'initial state': array([0.45457773])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7484983253241962
+{'stepCount': 3, 'initial state': array([0.45457773]), 'done_state': array([-0.45870505])}
+episode index:192
+at step 0:
+{'stepCount': 1, 'initial state': array([-0.88259285]), 'done_state': array([0.13997693])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7498014428095632
+{'stepCount': 1, 'initial state': array([-0.88259285]), 'done_state': array([0.13997693])}
+episode index:193
+at step 0:
+{'stepCount': 1, 'initial state': array([3.5674363])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7496942188775552
+{'stepCount': 4, 'initial state': array([3.5674363]), 'done_state': array([-0.33375089])}
+episode index:194
+at step 0:
+{'stepCount': 1, 'initial state': array([0.09768752])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7504650177551062
+{'stepCount': 2, 'initial state': array([0.09768752]), 'done_state': array([0.09327175])}
+episode index:195
+at step 0:
+{'stepCount': 1, 'initial state': array([2.06013739])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7512279513379884
+{'stepCount': 2, 'initial state': array([2.06013739]), 'done_state': array([0.06495775])}
+episode index:196
+at step 0:
+{'stepCount': 1, 'initial state': array([-2.12919589])}
+done in step count: 1
+reward sum = 0.9
+running average episode reward sum: 0.7519831394022625
+{'stepCount': 2, 'initial state': array([-2.12919589]), 'done_state': array([-0.11116321])}
+episode index:197
+at step 0:
+{'stepCount': 1, 'initial state': array([3.38607923])}
+done in step count: 2
+reward sum = 0.81
+running average episode reward sum: 0.7522761538497259
+{'stepCount': 3, 'initial state': array([3.38607923]), 'done_state': array([0.4631371])}
+episode index:198
+at step 0:
+{'stepCount': 1, 'initial state': array([3.57970296])}
+done in step count: 3
+reward sum = 0.7290000000000001
+running average episode reward sum: 0.7521591882524911
+{'stepCount': 4, 'initial state': array([3.57970296]), 'done_state': array([-0.37301676])}
+episode index:199
+at step 0:
+{'stepCount': 1, 'initial state': array([-1.34392761]), 'done_state': array([-0.37850318])}
+done in step count: 0
+reward sum = 1.0
+running average episode reward sum: 0.7533983923112286
+{'stepCount': 1, 'initial state': array([-1.34392761]), 'done_state': array([-0.37850318])}
+
+Process finished with exit code 0

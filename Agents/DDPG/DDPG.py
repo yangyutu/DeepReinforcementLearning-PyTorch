@@ -169,18 +169,13 @@ class DDPGAgent:
             self.process_hindSightExperience(state, action, nextState, reward, info)
 
 
-    def update_net(self, state, action, nextState, reward, info):
-
+    def prepare_minibatch(self, state, action, nextState, reward, info):
         # first store memory
 
-        self.store_experience(state, action, nextState, reward, info)
-        if len(self.memory) < self.trainBatchSize:
-            return
         transitions_raw = self.memory.sample(self.trainBatchSize)
         transitions = Transition(*zip(*transitions_raw))
         action = torch.tensor(transitions.action, device=self.device, dtype=torch.float32)  # shape(batch, numActions)
         reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32)  # shape(batch)
-        batchSize = reward.shape[0]
 
         # for some env, the output state requires further processing before feeding to neural network
         if self.stateProcessor is not None:
@@ -188,15 +183,32 @@ class DDPGAgent:
             nonFinalNextState, nonFinalMask = self.stateProcessor(transitions.next_state, self.device)
         else:
             state = torch.tensor(transitions.state, device=self.device, dtype=torch.float32)
-            nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)), device=self.device, dtype=torch.uint8)
-            nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None], device=self.device, dtype=torch.float32)
+            nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)), device=self.device,
+                                        dtype=torch.uint8)
+            nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None], device=self.device,
+                                             dtype=torch.float32)
+
+        return state, nonFinalMask, nonFinalNextState, action, reward
+
+    def update_net(self, state, action, nextState, reward, info):
+
+        # first store memory
+
+        self.store_experience(state, action, nextState, reward, info)
+
+        # prepare mini-batch
+        if len(self.memory) < self.trainBatchSize:
+            return
+
+        state, nonFinalMask, nonFinalNextState, action, reward = \
+            self.prepare_minibatch(state, action, nextState, reward, info)
 
 
         # Critic loss
         QValues = self.criticNet.forward(state, action).squeeze()
         # next action is calculated using target actor network
         next_actions = self.actorNet_target.forward(nonFinalNextState)
-        QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32)
+        QNext = torch.zeros(self.trainBatchSize, device=self.device, dtype=torch.float32)
         QNext[nonFinalMask] = self.criticNet_target.forward(nonFinalNextState, next_actions.detach()).squeeze()
 
         targetValues = reward + self.gamma * QNext

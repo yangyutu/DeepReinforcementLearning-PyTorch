@@ -9,8 +9,10 @@ import pickle
 class TDDDPGAgent(DDPGAgent):
     def __init__(self, config, actorNets, criticNets, env, optimizers, netLossFunc, nbAction, stateProcessor=None, experienceProcessor = None):
 
-        self.config = config
-        self.read_config()
+        super(TDDDPGAgent, self).__init__(config, actorNets, criticNets, env, optimizers, netLossFunc, nbAction,
+                                               stateProcessor, experienceProcessor)
+
+    def initalizeNets(self, actorNets, criticNets, optimizers):
         self.actorNet = actorNets['actor']
         self.actorNet_target = actorNets['target'] if 'target' in actorNets else None
         self.criticNetOne = criticNets['criticOne']
@@ -18,15 +20,15 @@ class TDDDPGAgent(DDPGAgent):
         self.criticNetTwo = criticNets['criticTwo']
         self.criticNet_targetTwo = criticNets['targetTwo'] if 'targetTwo' in criticNets else None
 
-        self.env = env
         self.actor_optimizer = optimizers['actor']
         self.criticOne_optimizer = optimizers['criticOne']
         self.criticTwo_optimizer = optimizers['criticTwo']
-        self.numAction = nbAction
-        self.stateProcessor = stateProcessor
-        self.netLossFunc = netLossFunc
-        self.experienceProcessor = experienceProcessor
-        self.initialization()
+
+        self.net_to_device()
+
+    def init_memory(self):
+        self.memory = ReplayMemory(self.memoryCapacity)
+
 
     def read_config(self):
         super(TDDDPGAgent, self).read_config()
