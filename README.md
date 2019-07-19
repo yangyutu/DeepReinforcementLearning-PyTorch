@@ -16,7 +16,9 @@ PyTorch implementation of classical deep reinforcement learning algorithms
 * REINFORCE
 * Deep Deterministic Policy Gradient (DDPG)
   - Continuous control with deep reinforcement learning [[Publication]](https://arxiv.org/pdf/1509.02971.pdf)
-* Asynchronous/Synchronous Advantage Actor Critic (A3C, A2C)
+* Asynchronous/Synchronous Advantage Actor Critic (A3C, A2C) [[Publication]](https://arxiv.org/pdf/1602.01783.pdf)
+* TD3 [[Publication]](https://arxiv.org/pdf/1802.09477.pdf)
+* Soft Actor Critic (SAD) [[Publication]](https://arxiv.org/pdf/1801.01290.pdf)
 * Stacked DQN
 * Stacked DDPG
 
@@ -30,3 +32,12 @@ PyTorch implementation of classical deep reinforcement learning algorithms
 ## Application examples:
 
 * Efficient Navigation of Active Particles in an Unseen Environment via Deep Reinforcement Learning [[Publication]](https://arxiv.org/abs/1906.10844)
+
+
+## Custom envs
+
+* 1D stablizer, 2D stabilizer, and multi-Dim stabilizer
+* maze with static obstacles and stchastic/deterministic agent
+* maze with dynamic obstacles and stchastic/deterministic agent
+* finanical portfolio engineering env (for hedging and investment)
+* colloidal assembly env
