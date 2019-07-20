@@ -1,19 +1,18 @@
-from Agents.SAC.SAC import SACAgent
-from Env.CustomEnv.StablizerOneD import StablizerOneDContinuous
+from Agents.StackedSAC.StackedSAC import StackedSACAgent
+from Env.CustomEnv.StablizerOneD import StablizerOneDContinuousFiniteHorizon
 from utils.netInit import xavier_init
 import json
 from torch import optim
 from copy import deepcopy
-from Env.CustomEnv.StablizerOneD import StablizerOneD
+
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-import matplotlib.pyplot as plt
+
 import torch
-from utils.OUNoise import OUNoise
-from torch.distributions import Normal
 
 torch.manual_seed(1)
+from torch.distributions import Normal
 
 
 class ValueNet(nn.Module):
@@ -99,13 +98,21 @@ class GaussianPolicy(nn.Module):
         log_prob = log_prob.sum(1, keepdim=True)
         return action, log_prob
 
+def stateProcessor(state, device = 'cpu'):
+    # given a list a dictions like { 'sensor': np.array, 'target': np.array}
+    # we want to get a diction like {'sensor': list of torch tensor, 'target': list of torch tensor}
+    nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, state)), device=device, dtype=torch.uint8)
 
+    stateList = [item['state'] for item in state if item is not None]
+    nonFinalState = torch.tensor(stateList, dtype=torch.float32, device=device)
+    #nonFinalState = {'state': torch.tensor(senorList, dtype=torch.float32, device=device),
+    #                 'target': torch.tensor(targetList, dtype=torch.float32, device=device)}
 
+    return nonFinalState, nonFinalMask
 
-# first construct the neutral network
 config = dict()
 
-config['trainStep'] = 200
+config['trainStep'] = 1500
 config['targetNetUpdateStep'] = 100
 config['memoryCapacity'] = 20000
 config['trainBatchSize'] = 64
@@ -118,69 +125,85 @@ config['netGradClip'] = 1
 config['logFlag'] = True
 config['logFileName'] = 'StabilizerOneDLog/traj'
 config['logFrequency'] = 1000
-config['episodeLength'] = 200
+config['episodeLength'] = 6
 config['SACAlpha'] = 0.01
 
-env = StablizerOneDContinuous()
+env = StablizerOneDContinuousFiniteHorizon(config = config)
 N_S = env.stateDim
 N_A = env.nbActions
+
+
+
+
+nPeriods = config['episodeLength']
 
 netParameter = dict()
 netParameter['n_feature'] = N_S
 netParameter['n_hidden'] = 100
 netParameter['n_output'] = N_A
 
-actorNet = GaussianPolicy(netParameter['n_feature'],
+actorNet = [GaussianPolicy(netParameter['n_feature'],
                                     netParameter['n_hidden'],
-                                    netParameter['n_output'])
+                                    netParameter['n_output']) for _ in range(nPeriods)]
 
-valueNet = ValueNet(netParameter['n_feature'],
-                                    netParameter['n_hidden'])
+valueNet = [ValueNet(netParameter['n_feature'],
+                                    netParameter['n_hidden']) for _ in range(nPeriods)]
 
 valueTargetNet = deepcopy(valueNet)
 
-softQNetOne = QNet(netParameter['n_feature'] + N_A,
-                                    netParameter['n_hidden'])
+softQNetOne = [QNet(netParameter['n_feature'] + N_A,
+                                    netParameter['n_hidden']) for _ in range(nPeriods)]
 
-softQNetTwo = QNet(netParameter['n_feature'] + N_A,
-                                    netParameter['n_hidden'])
+softQNetTwo = [QNet(netParameter['n_feature'] + N_A,
+                                    netParameter['n_hidden']) for _ in range(nPeriods)]
 
 
-actorOptimizer = optim.Adam(actorNet.parameters(), lr=config['actorLearningRate'])
-valueOptimizer = optim.Adam(valueNet.parameters(), lr=config['valueLearningRate'])
-softQOneOptimizer = optim.Adam(softQNetOne.parameters(), lr=config['softQLearningRate'])
-softQTwoOptimizer = optim.Adam(softQNetTwo.parameters(), lr=config['softQLearningRate'])
-
+actorOptimizer = [optim.Adam(actorNet[n].parameters(), lr=config['actorLearningRate']) for n in range(nPeriods)]
+valueOptimizer = [optim.Adam(valueNet[n].parameters(), lr=config['valueLearningRate']) for n in range(nPeriods)]
+softQOneOptimizer = [optim.Adam(softQNetOne[n].parameters(), lr=config['softQLearningRate']) for n in range(nPeriods)]
+softQTwoOptimizer = [optim.Adam(softQNetTwo[n].parameters(), lr=config['softQLearningRate']) for n in range(nPeriods)]
 
 actorNets = {'actor': actorNet}
 criticNets = {'softQOne': softQNetOne, 'softQTwo': softQNetTwo, 'value': valueNet, 'valueTarget': valueTargetNet}
 optimizers = {'actor': actorOptimizer, 'softQOne':softQOneOptimizer,\
               'softQTwo':softQTwoOptimizer, 'value':valueOptimizer}
 
-agent = SACAgent(config, actorNets, criticNets, env, optimizers, torch.nn.MSELoss(reduction='mean'), N_A)
+timeIndexMap = {}
+for i in range(nPeriods + 1):
+    timeIndexMap[i] = i - 1
+timeIndexMap[0] = 0
+
+agent = StackedSACAgent(config, actorNets, criticNets, env, optimizers, torch.nn.MSELoss(reduction='mean'), N_A, stateProcessor=stateProcessor,timeIndexMap=timeIndexMap)
+
 
 xSet = np.linspace(-4,4,100)
-policy = np.zeros_like(xSet)
-value = np.zeros_like(xSet)
-for i, x in enumerate(xSet):
-    state = torch.tensor([x], dtype=torch.float32).unsqueeze(0)
-    action = agent.actorNet.select_action(state, noiseFlag = False)
-    policy[i] = agent.actorNet.select_action(state, noiseFlag = False)
-    value[i] = agent.valueNet.forward(state).item()
 
-np.savetxt('StabilizerPolicyBeforeTrain.txt', policy, fmt='%f')
-np.savetxt('StabilizerValueBeforeTrain.txt', value, fmt='%f')
+for n in range(nPeriods):
+    policy = np.zeros_like(xSet)
+    value = np.zeros_like(xSet)
+
+    for i, x in enumerate(xSet):
+        state = torch.tensor([x], dtype=torch.float32).unsqueeze(0)
+        #combinedState = {'state': np.array([x]), 'timeStep': n}
+
+        action = agent.actorNets[n].select_action(state, noiseFlag = False)
+        policy[i] = agent.actorNets[n].select_action(state, noiseFlag = False)
+        value[i] = agent.valueNets[n].forward(state).item()
+    np.savetxt('StabilizerPolicyBeforeTrainNet' + str(n) + '.txt', policy, fmt='%f')
+    np.savetxt('StabilizerValueBeforeTrainNet' + str(n) + '.txt', value, fmt='%f')
 
 agent.train()
 
-policy = np.zeros_like(xSet)
-value = np.zeros_like(xSet)
+for n in range(nPeriods):
+    policy = np.zeros_like(xSet)
+    value = np.zeros_like(xSet)
 
-for i, x in enumerate(xSet):
-    state = torch.tensor([x], dtype=torch.float32).unsqueeze(0)
-    action = agent.actorNet.select_action(state, noiseFlag=False)
-    policy[i] = agent.actorNet.select_action(state, noiseFlag=False)
-    value[i] = agent.valueNet.forward(state).item()
+    for i, x in enumerate(xSet):
+        state = torch.tensor([x], dtype=torch.float32).unsqueeze(0)
+        #combinedState = {'state': np.array([x]), 'timeStep': n}
 
-np.savetxt('StabilizerPolicyAfterTrain.txt', policy, fmt='%f')
-np.savetxt('StabilizerValueAfterTrain.txt', value, fmt='%f')
+        action = agent.actorNets[n].select_action(state, noiseFlag = False)
+        policy[i] = agent.actorNets[n].select_action(state, noiseFlag = False)
+        value[i] = agent.valueNets[n].forward(state).item()
+    np.savetxt('StabilizerPolicyAfterTrainNet' + str(n) + '.txt', policy, fmt='%f')
+    np.savetxt('StabilizerValueAfterTrainNet' + str(n) + '.txt', value, fmt='%f')

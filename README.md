@@ -19,8 +19,7 @@ PyTorch implementation of classical deep reinforcement learning algorithms
 * Asynchronous/Synchronous Advantage Actor Critic (A3C, A2C) [[Publication]](https://arxiv.org/pdf/1602.01783.pdf)
 * TD3 [[Publication]](https://arxiv.org/pdf/1802.09477.pdf)
 * Soft Actor Critic (SAD) [[Publication]](https://arxiv.org/pdf/1801.01290.pdf)
-* Stacked DQN
-* Stacked DDPG
+* Stacked DQN/DDPG/SAC
 
 
 ## Enhancements:

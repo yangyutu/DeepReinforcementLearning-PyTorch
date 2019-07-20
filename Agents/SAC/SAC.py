@@ -50,32 +50,25 @@ class SACAgent(DDPGAgent):
         self.valueTargetNet = self.valueTargetNet.to(self.device)
 
 
-    def update_net(self, state, action, nextState, reward, info):
+    def update_net_on_transitions(self, transitions_raw):
 
-        # first store memory
-
-        self.store_experience(state, action, nextState, reward, info)
-
-        # prepare mini-batch
-        if len(self.memory) < self.trainBatchSize:
-            return
-
-        state, nonFinalMask, nonFinalNextState, action, reward = \
-            self.prepare_minibatch(state, action, nextState, reward, info)
+        state, nonFinalMask, nonFinalNextState, action, reward = self.prepare_minibatch(transitions_raw)
 
         # now do net update
         # Q and value nets evaluation
+
         predicted_q_value1 = self.softQNetOne(state, action).squeeze()
         predicted_q_value2 = self.softQNetTwo(state, action).squeeze()
 
         predicted_value = self.valueNet(state).squeeze()
 
-        # action for next state
+        # action for CURRENT state
         next_action, log_prob = self.actorNet.select_action(state, probFlag=True)
 
-        # Training Q Function, using value function as target
+        # Training Q Function, using target value function as target
         target_value = torch.zeros(self.trainBatchSize, device=self.device, dtype=torch.float32)
-        target_value[nonFinalMask] = self.valueTargetNet(nonFinalNextState).squeeze()
+        if len(nonFinalNextState):
+            target_value[nonFinalMask] = self.valueTargetNet(nonFinalNextState).squeeze()
         target_q_value = reward + self.gamma * target_value
 
         q_value_loss1 = self.netLossFunc(predicted_q_value1, target_q_value.detach())
@@ -93,7 +86,7 @@ class SACAgent(DDPGAgent):
             torch.nn.utils.clip_grad_norm_(self.softQNetTwo.parameters(), self.netGradClip)
         self.softQTwo_optimizer.step()
 
-        # Training Value Function
+        # Training Value Function, using min value of Q functions as the target
         predicted_new_q_value = torch.min(self.softQNetOne(state, next_action), self.softQNetTwo(state, next_action))
         ## the log_prob is the entropy term
         target_value_func = (predicted_new_q_value - self.SACAlpha * log_prob).squeeze()
@@ -114,14 +107,12 @@ class SACAgent(DDPGAgent):
             torch.nn.utils.clip_grad_norm_(self.actorNet.parameters(), self.netGradClip)
         self.actor_optimizer.step()
 
-        for target_param, param in zip(self.valueTargetNet.parameters(), self.valueNet.parameters()):
-            target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
-
-
         if self.globalStepCount % self.lossRecordStep == 0:
             self.losses.append([self.globalStepCount, self.epIdx, value_loss.item(), policy_loss.item()])
 
-        self.learnStepCounter += 1
+    def copy_nets(self):
+        for target_param, param in zip(self.valueTargetNet.parameters(), self.valueNet.parameters()):
+            target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
     def save_all(self):
         prefix = self.dirName + self.identifier + 'Finalepoch' + str(self.epIdx)

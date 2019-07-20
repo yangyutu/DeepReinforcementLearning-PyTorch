@@ -1,5 +1,5 @@
 from Agents.SAC.SAC import SACAgent
-from Env.CustomEnv.StablizerOneD import StablizerOneDContinuous
+from Env.CustomEnv.StablizerMultiD import StablizerMultiDContinuous
 from utils.netInit import xavier_init
 import json
 from torch import optim
@@ -105,10 +105,11 @@ class GaussianPolicy(nn.Module):
 # first construct the neutral network
 config = dict()
 
-config['trainStep'] = 200
+config['trainStep'] = 5000
 config['targetNetUpdateStep'] = 100
 config['memoryCapacity'] = 20000
 config['trainBatchSize'] = 64
+config['Dim'] = 20
 config['gamma'] = 0.9
 config['tau'] = 0.01
 config['actorLearningRate'] = 0.001
@@ -118,10 +119,12 @@ config['netGradClip'] = 1
 config['logFlag'] = True
 config['logFileName'] = 'StabilizerOneDLog/traj'
 config['logFrequency'] = 1000
-config['episodeLength'] = 200
-config['SACAlpha'] = 0.01
+config['episodeLength'] = 100
+config['SACAlpha'] = 0.05
+config['hindSightER'] = True
+config['hindSightERFreq'] = 3
 
-env = StablizerOneDContinuous()
+env = StablizerMultiDContinuous(config = config)
 N_S = env.stateDim
 N_A = env.nbActions
 
@@ -159,28 +162,28 @@ optimizers = {'actor': actorOptimizer, 'softQOne':softQOneOptimizer,\
 
 agent = SACAgent(config, actorNets, criticNets, env, optimizers, torch.nn.MSELoss(reduction='mean'), N_A)
 
-xSet = np.linspace(-4,4,100)
-policy = np.zeros_like(xSet)
-value = np.zeros_like(xSet)
-for i, x in enumerate(xSet):
-    state = torch.tensor([x], dtype=torch.float32).unsqueeze(0)
-    action = agent.actorNet.select_action(state, noiseFlag = False)
-    policy[i] = agent.actorNet.select_action(state, noiseFlag = False)
-    value[i] = agent.valueNet.forward(state).item()
-
-np.savetxt('StabilizerPolicyBeforeTrain.txt', policy, fmt='%f')
-np.savetxt('StabilizerValueBeforeTrain.txt', value, fmt='%f')
+# xSet = np.linspace(-4,4,100)
+# policy = np.zeros_like(xSet)
+# value = np.zeros_like(xSet)
+# for i, x in enumerate(xSet):
+#     state = torch.tensor([x], dtype=torch.float32).unsqueeze(0)
+#     action = agent.actorNet.select_action(state, noiseFlag = False)
+#     policy[i] = agent.actorNet.select_action(state, noiseFlag = False)
+#     value[i] = agent.valueNet.forward(state).item()
+#
+# np.savetxt('StabilizerPolicyBeforeTrain.txt', policy, fmt='%f')
+# np.savetxt('StabilizerValueBeforeTrain.txt', value, fmt='%f')
 
 agent.train()
 
-policy = np.zeros_like(xSet)
-value = np.zeros_like(xSet)
-
-for i, x in enumerate(xSet):
-    state = torch.tensor([x], dtype=torch.float32).unsqueeze(0)
-    action = agent.actorNet.select_action(state, noiseFlag=False)
-    policy[i] = agent.actorNet.select_action(state, noiseFlag=False)
-    value[i] = agent.valueNet.forward(state).item()
-
-np.savetxt('StabilizerPolicyAfterTrain.txt', policy, fmt='%f')
-np.savetxt('StabilizerValueAfterTrain.txt', value, fmt='%f')
+# policy = np.zeros_like(xSet)
+# value = np.zeros_like(xSet)
+#
+# for i, x in enumerate(xSet):
+#     state = torch.tensor([x], dtype=torch.float32).unsqueeze(0)
+#     action = agent.actorNet.select_action(state, noiseFlag=False)
+#     policy[i] = agent.actorNet.select_action(state, noiseFlag=False)
+#     value[i] = agent.valueNet.forward(state).item()
+#
+# np.savetxt('StabilizerPolicyAfterTrain.txt', policy, fmt='%f')
+# np.savetxt('StabilizerValueAfterTrain.txt', value, fmt='%f')

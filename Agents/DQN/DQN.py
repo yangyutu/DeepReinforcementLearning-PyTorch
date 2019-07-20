@@ -57,6 +57,9 @@ class DQNAgent(BaseDQNAgent):
         # clear the nstep buffer
         self.nStepBuffer.clear()
 
+    def work_before_step(self, state):
+        self.epsThreshold = self.epsilon_by_step(self.globalStepCount)
+
     def train(self):
 
         runningAvgEpisodeReward = 0.0
@@ -70,10 +73,13 @@ class DQNAgent(BaseDQNAgent):
             done = False
             rewardSum = 0
 
+            # any work to be done at episode begin
             self.work_At_Episode_Begin()
 
             for stepCount in range(self.episodeLength):
-                self.epsThreshold = self.epsilon_by_step(self.globalStepCount)
+
+                # any work to be done before select actions
+                self.work_before_step(state)
 
                 action = self.select_action(self.policyNet, state, self.epsThreshold)
 
@@ -214,18 +220,12 @@ class DQNAgent(BaseDQNAgent):
 
             self.learnStepCounter += 1
 
-    def update_net_on_transitions(self, transitions_raw, loss_fun, gradientStep = 1, updateOption='policyNet', netGradClip=None, info=None):
-
-        # order the data
-        # convert transition list to torch tensors
-        # use trick from https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
-        # https://stackoverflow.com/questions/19339/transpose-unzip-function-inverse-of-zip/19343#19343
+    def prepare_minibatch(self, transitions_raw):
+        # first store memory
 
         transitions = Transition(*zip(*transitions_raw))
-        action = torch.tensor(transitions.action, device=self.device, dtype=torch.long).unsqueeze(-1) # shape(batch, 1)
-        reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32).unsqueeze(-1) # shape(batch, 1)
-        batchSize = reward.shape[0]
-
+        action = torch.tensor(transitions.action, device=self.device, dtype=torch.float32)  # shape(batch, numActions)
+        reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32)  # shape(batch)
 
         # for some env, the output state requires further processing before feeding to neural network
         if self.stateProcessor is not None:
@@ -233,8 +233,21 @@ class DQNAgent(BaseDQNAgent):
             nonFinalNextState, nonFinalMask = self.stateProcessor(transitions.next_state, self.device)
         else:
             state = torch.tensor(transitions.state, device=self.device, dtype=torch.float32)
-            nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)), device=self.device, dtype=torch.uint8)
-            nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None], device=self.device, dtype=torch.float32)
+            nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)), device=self.device,
+                                        dtype=torch.uint8)
+            nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None], device=self.device,
+                                             dtype=torch.float32)
+
+        return state, nonFinalMask, nonFinalNextState, action, reward
+
+    def update_net_on_transitions(self, transitions_raw, loss_fun, gradientStep = 1, updateOption='policyNet', netGradClip=None, info=None):
+
+        # order the data
+        # convert transition list to torch tensors
+        # use trick from https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+        # https://stackoverflow.com/questions/19339/transpose-unzip-function-inverse-of-zip/19343#19343
+
+        state, nonFinalMask, nonFinalNextState, action, reward = self.prepare_minibatch(transitions_raw)
 
         for step in range(gradientStep):
             # calculate Qvalues based on selected action batch
@@ -267,7 +280,6 @@ class DQNAgent(BaseDQNAgent):
                 loss = torch.mean(loss_single)
 
             # Optimize the model
-            # print(loss)
             # zero gradient
             self.optimizer.zero_grad()
 

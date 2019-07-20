@@ -85,7 +85,7 @@ config['netGradClip'] = 1
 config['logFlag'] = True
 config['logFileName'] = 'StabilizerOneDLog/traj'
 config['logFrequency'] = 1000
-config['episodeLength'] = 200
+config['episodeLength'] = 50
 env = StablizerMultiDContinuous(config = config)
 N_S = env.stateDim
 N_A = env.nbActions

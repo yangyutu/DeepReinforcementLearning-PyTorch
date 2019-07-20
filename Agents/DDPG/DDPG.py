@@ -169,10 +169,9 @@ class DDPGAgent:
             self.process_hindSightExperience(state, action, nextState, reward, info)
 
 
-    def prepare_minibatch(self, state, action, nextState, reward, info):
+    def prepare_minibatch(self, transitions_raw):
         # first store memory
 
-        transitions_raw = self.memory.sample(self.trainBatchSize)
         transitions = Transition(*zip(*transitions_raw))
         action = torch.tensor(transitions.action, device=self.device, dtype=torch.float32)  # shape(batch, numActions)
         reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32)  # shape(batch)
@@ -200,16 +199,36 @@ class DDPGAgent:
         if len(self.memory) < self.trainBatchSize:
             return
 
-        state, nonFinalMask, nonFinalNextState, action, reward = \
-            self.prepare_minibatch(state, action, nextState, reward, info)
+        transitions_raw = self.memory.sample(self.trainBatchSize)
 
+        self.update_net_on_transitions(transitions_raw)
+
+        self.copy_nets()
+
+        self.learnStepCounter += 1
+
+    def copy_nets(self):
+        # update networks
+        if self.learnStepCounter % self.policyUpdateFreq == 0:
+            # update target networks
+            for target_param, param in zip(self.actorNet_target.parameters(), self.actorNet.parameters()):
+                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
+
+            for target_param, param in zip(self.criticNet_target.parameters(), self.criticNet.parameters()):
+                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
+
+    def update_net_on_transitions(self, transitions_raw):
+
+        state, nonFinalMask, nonFinalNextState, action, reward = self.prepare_minibatch(transitions_raw)
 
         # Critic loss
         QValues = self.criticNet.forward(state, action).squeeze()
-        # next action is calculated using target actor network
-        next_actions = self.actorNet_target.forward(nonFinalNextState)
         QNext = torch.zeros(self.trainBatchSize, device=self.device, dtype=torch.float32)
-        QNext[nonFinalMask] = self.criticNet_target.forward(nonFinalNextState, next_actions.detach()).squeeze()
+
+        if len(nonFinalNextState):
+            # next action is calculated using target actor network
+            next_actions = self.actorNet_target.forward(nonFinalNextState)
+            QNext[nonFinalMask] = self.criticNet_target.forward(nonFinalNextState, next_actions.detach()).squeeze()
 
         targetValues = reward + self.gamma * QNext
         critic_loss = self.netLossFunc(QValues, targetValues)
@@ -238,15 +257,9 @@ class DDPGAgent:
             if self.globalStepCount % self.lossRecordStep == 0:
                 self.losses.append([self.globalStepCount, self.epIdx, critic_loss.item(), policy_loss.item()])
 
-    #        if self.globalStepCount % self.netUpdateFrequency == 0:
-            # update target networks
-            for target_param, param in zip(self.actorNet_target.parameters(), self.actorNet.parameters()):
-                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
-            for target_param, param in zip(self.criticNet_target.parameters(), self.criticNet.parameters()):
-                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
-
-        self.learnStepCounter += 1
+    def work_before_step(self, state):
+        pass
 
 
     def train(self):
@@ -263,6 +276,9 @@ class DDPGAgent:
             rewardSum = 0
 
             for stepCount in range(self.episodeLength):
+
+                # any work to be done before select actions
+                self.work_before_step(state)
 
                 action = self.select_action(self.actorNet, state, noiseFlag=True)
 
