@@ -240,11 +240,13 @@ class DDPGAgent:
 
         self.critic_optimizer.step()
 
-        # Actor loss
-        # we try to maximize criticNet output(which is state value)
+
 
         # update networks
         if self.learnStepCounter % self.policyUpdateFreq == 0:
+
+            # Actor loss
+            # we try to maximize criticNet output(which is state value)
             policy_loss = -self.criticNet.forward(state, self.actorNet.forward(state)).mean()
 
             self.actor_optimizer.zero_grad()

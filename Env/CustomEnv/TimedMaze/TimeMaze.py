@@ -100,9 +100,14 @@ class TimeMazeEnv:
 
         self.rewardKinks = self.config['rewardKinks']
 
-        self.kinkEpisode = 500
+        self.kinkEpisode = 300
         if 'kinkEpisode' in self.config:
             self.kinkEpisode = self.config['kinkEpisode']
+
+
+        self.timeEmbeddingFlag = False
+        if 'timeEmbeddingFlag' in self.config:
+            self.timeEmbeddingFlag = self.config['timeEmbeddingFlag']
 
     def thresh_by_episode(self, step):
         return self.endThresh + (
@@ -131,9 +136,15 @@ class TimeMazeEnv:
             dy = - distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
 
             timeStep = state['timeStep']
-            combinedState = {'sensor': sensorInfoMat,
+            if not self.timeEmbeddingFlag:
+                combinedState = {'sensor': sensorInfoMat,
                              'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor]),
                              'timeStep': timeStep}
+            else:
+                combinedState = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
+                     'target': np.array(
+                         [dx / self.scaleFactor, dy / self.scaleFactor, float(timeStep) / self.episodeEndStep]),
+                     'timeStep': self.stepCount}
 
             actionNew = action
             # here [0, 0] is dummy input to ensure done is always true
@@ -187,7 +198,7 @@ class TimeMazeEnv:
 
         if self.is_terminal(distance):
             done = True
-
+            reward = -1.0
             if len(self.rewardKinks):
                 i = 0
                 while i + 1 < len(self.rewardKinks):
@@ -272,9 +283,15 @@ class TimeMazeEnv:
         self.info['currentTarget'] = self.targetState.copy()
 
         if self.obstacleFlg:
-            state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                     'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor]),
-                     'timeStep': self.stepCount}
+            if not self.timeEmbeddingFlag:
+                state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
+                         'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor]),
+                         'timeStep': self.stepCount}
+            else:
+                state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
+                         'target': np.array(
+                             [dx / self.scaleFactor, dy / self.scaleFactor, float(self.stepCount) / self.episodeEndStep]),
+                         'timeStep': self.stepCount}
         else:
             state = distance / self.scaleFactor
 
@@ -354,10 +371,16 @@ class TimeMazeEnv:
 
         # angleDistance = math.atan2(distance[1], distance[0]) - self.currentState[2]
         if self.obstacleFlg:
-            state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                     'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor]),
-                     'timeStep': self.stepCount}
-            return state
+            if not self.timeEmbeddingFlag:
+                state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
+                         'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor]),
+                         'timeStep': self.stepCount}
+                return state
+            else:
+                state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
+                         'target': np.array([dx / self.scaleFactor, dy / self.scaleFactor, float(self.stepCount)/self.episodeEndStep]),
+                         'timeStep': self.stepCount}
+                return state
         else:
             return distance / self.scaleFactor
 

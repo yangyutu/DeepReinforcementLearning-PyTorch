@@ -77,7 +77,7 @@ def stateProcessor(state, device = 'cpu'):
 
 config = dict()
 
-config['trainStep'] = 1500
+config['trainStep'] = 2500
 config['targetNetUpdateStep'] = 100
 config['memoryCapacity'] = 20000
 config['trainBatchSize'] = 64
@@ -89,7 +89,7 @@ config['netGradClip'] = 1
 config['logFlag'] = True
 config['logFileName'] = 'StabilizerOneDLog/traj'
 config['logFrequency'] = 1000
-config['episodeLength'] = 6
+config['episodeLength'] = 10
 
 
 env = StablizerOneDContinuousFiniteHorizon(config = config)

@@ -181,7 +181,7 @@ class StablizerOneDContinuousFiniteHorizon(gym.Env):
         self.currentState += action
         reward = 0.0
         done = False
-        if abs(self.currentState) < 0.5:
+        if abs(self.currentState) < 0.1:
             reward = 1
             done = True
             self.infoDict['done_state'] = self.currentState.copy()

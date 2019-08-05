@@ -224,8 +224,9 @@ class DQNAgent(BaseDQNAgent):
         # first store memory
 
         transitions = Transition(*zip(*transitions_raw))
-        action = torch.tensor(transitions.action, device=self.device, dtype=torch.float32)  # shape(batch, numActions)
-        reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32)  # shape(batch)
+        action = torch.tensor(transitions.action, device=self.device, dtype=torch.long).unsqueeze(-1)  # shape(batch, 1)
+        reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32).unsqueeze(
+            -1)  # shape(batch, 1)
 
         # for some env, the output state requires further processing before feeding to neural network
         if self.stateProcessor is not None:
@@ -255,7 +256,7 @@ class DQNAgent(BaseDQNAgent):
 
             if updateOption == 'targetNet':
                  # Here we detach because we do not want gradient flow from target values to net parameters
-                 QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32)
+                 QNext = torch.zeros(self.trainBatchSize, device=self.device, dtype=torch.float32)
                  QNext[nonFinalMask] = self.targetNet(nonFinalNextState).max(1)[0].detach()
                  targetValues = reward + (self.gamma**self.nStepForward) * QNext.unsqueeze(-1)
             if updateOption == 'policyNet':
@@ -265,7 +266,7 @@ class DQNAgent(BaseDQNAgent):
                  # select optimal action from policy net
                  with torch.no_grad():
                     batchAction = self.policyNet(nonFinalNextState).max(dim=1)[1].unsqueeze(-1)
-                    QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32).unsqueeze(-1)
+                    QNext = torch.zeros(self.trainBatchSize, device=self.device, dtype=torch.float32).unsqueeze(-1)
                     QNext[nonFinalMask] = self.targetNet(nonFinalNextState).gather(1, batchAction)
                     targetValues = reward + (self.gamma**self.nStepForward) * QNext
 
