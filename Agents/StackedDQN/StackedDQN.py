@@ -235,13 +235,22 @@ class StackedDQNAgent(DQNAgent):
                 raise NotImplementedError
                 targetValues = reward + self.gamma * torch.max(self.policyNet(nextState).detach(), dim=1)[0].unsqueeze(-1)
             if updateOption == 'doubleQ':
-                 raise NotImplementedError
+
                  # select optimal action from policy net
                  with torch.no_grad():
-                    batchAction = self.policyNet(nonFinalNextState).max(dim=1)[1].unsqueeze(-1)
-                    QNext = torch.zeros(self.trainBatchSize, device=self.device, dtype=torch.float32).unsqueeze(-1)
-                    QNext[nonFinalMask] = self.targetNet(nonFinalNextState).gather(1, batchAction)
-                    targetValues = reward + (self.gamma) * QNext
+                    batchAction = self.policyNet(nonFinalNextState).max(dim=1)[1]
+                    QNext = torch.zeros(self.trainBatchSize, device=self.device, dtype=torch.float32)
+
+                    if self.nextStageTargetNet is not None and len(finalNextState):
+                        # Q values for current stage done but not next stage done (or not global done)
+                        # if nextStageTargetNet is None, means it is in the final stage, and we will not bootstrap for finite-horizon MDP
+                        QNext[finalMask] = self.nextStageTargetNet(finalNextState).max(1)[0].detach()
+
+                    # Q values for states not stage done
+                    if len(nonFinalNextState):
+                        QNext[nonFinalMask] = self.targetNet(nonFinalNextState).max(1)[0].detach()
+
+                    targetValues = reward + (self.gamma) * QNext.unsqueeze(-1)
 
             # Compute loss
             loss_single = loss_fun(QValues, targetValues)

@@ -4,7 +4,7 @@ import random
 import matplotlib.pyplot as plt
 import copy
 
-# why incoporating time into state is important/unimportant?
+# why incoporating time into state is important
 
 # Suppose two agents are reponsible for a two-stage navigation
 # Suppose first agent has a smaller speed and the second agent has a larger speed.
@@ -18,31 +18,36 @@ import copy
 
 class CooperativeSimpleMazeTwoD(gym.Env):
 
-    def __init__(self, config=None):
+    def __init__(self, config):
         super(CooperativeSimpleMazeTwoD, self).__init__()
+        self.config = config
+        self.multiStage = True
+        if 'multiStage' in self.config:
+            self.multiStage = self.config['multiStage']
+        if self.multiStage:
+            self.numStages = self.config['numStages']
+
+        self.endStep = self.config['episodeLength']
+        self.mapHeight = self.config.get('mapHeight', 5)
+        self.mapWidth = self.config.get('mapWidth', 6)
+        self.timeScale = self.config.get('timeScale', 80.0)
+        self.lengthScale = self.config.get('lengthScale', 5.0)
 
         self.stepCount = 0
         self.currentState = np.array([8, 1], dtype=np.int32)
         self.targetState = np.array([1, 1], dtype=np.int32)
         self.nbActions = 4
         self.stateDim = 2
-        self.endStep = 400
-        self.discount = 1
-        self.mapHeight = 5
-        self.mapWidth = 6
-        self.timeScale = 80.0
-        self.lengthScale = 5.0
         self.epiCount = 0
-        self.numStages = 2
 
-        self.multiStage = True
+
+
 
 
         self.config = {}
         if config is not None:
             self.config = config
-        if 'multiStage' in self.config:
-            self.multiStage = self.config['multiStage']
+
 
         random.seed(1)
 
@@ -58,11 +63,15 @@ class CooperativeSimpleMazeTwoD(gym.Env):
             return reward, copy.deepcopy(self.done)
 
 
-        if self.stepCount <= self.endStep and self.stageID == 1 and self.isTermnate():
+
+
+        if self.stepCount <= self.endStep and self.stageID == (self.numStages - 1) and self.isTermnate():
             self.done['stage'][self.stageID] = True
             self.done['global'] = True
-            reward = self.discount**self.stepCount
+            reward = 1.0
             print('finish ', self.currentState, reward, self.stageID)
+
+
         return reward, copy.deepcopy(self.done)
 
     def isTermnate(self):
@@ -90,7 +99,7 @@ class CooperativeSimpleMazeTwoD(gym.Env):
         if action == 3 and not self.is_on_obstacle(i, j + 1):
             self.currentState[1] += 1
 
-        if self.currentState[1] > self.mapWidth / 2 and self.stageID == 0:
+        if self.currentState[1] > (self.stageID + 1 ) * self.mapWidth:
             # pass job to agent 1
             print('job passage', self.currentState)
             self.done['stage'][self.stageID] = True
@@ -104,38 +113,34 @@ class CooperativeSimpleMazeTwoD(gym.Env):
                  }
 
 
-        if done['stage'][0] and done['stage'][1] and not done['global']:
-            print('issue!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-
-        if done['stage'][0] and state['state'][1] < 1 and self.stageID == 0:
-            print('issue!!!!!!!')
-
         if self.multiStage:
-            return state, reward, done, {}
+            return state, reward, done, {'currentState': self.currentState.copy()}
         else:
             return state, reward, done['global'], {'currentState': self.currentState.copy()}
+
     def reset(self):
 
         self.done = {'stage': [False for _ in range(self.numStages)], 'global': False}
         self.epiCount += 1
 
-        if self.epiCount < 500:
-            if random.random() < 0.5:
-                self.stageID = 0
-            else:
-                self.stageID = 1
-                self.done['stage'][0] = True
-        else:
+        if self.epiCount >= 500 * self.numStages:
             self.stageID = 0
+        else:
+            index = self.epiCount // 300
+            self.stageID = max(self.numStages - 1 - index, 0)
+            for i in range(self.stageID):
+                self.done['stage'][i] = True
+
         print('start:', self.stageID)
         self.stepCount = 0
 
+        xposition = random.randint(0, self.mapHeight * self.numStages - 1)
         if self.stageID == 0:
-            self.currentState = np.array([0.0, 0.0])
+            self.currentState = np.array([xposition, 0.0])
         else:
-            self.currentState = np.array([0.0, self.mapWidth / 2 + 1])
+            self.currentState = np.array([xposition, self.mapWidth * self.stageID + 1])
 
-        self.targetState = np.array([self.mapHeight - 1.0, self.mapWidth - 1.0] )
+        self.targetState = np.array([self.mapHeight * self.numStages - 1.0, self.mapWidth * self.numStages - 1.0] )
 
         # self.stepCount / self.timeScale
         state = {'stageID': self.stageID,
@@ -145,7 +150,7 @@ class CooperativeSimpleMazeTwoD(gym.Env):
         return state
 
     def is_on_obstacle(self, i, j):
-        return not (0 <= i < self.mapHeight and 0 <= j < self.mapWidth)
+        return not (0 <= i < self.mapHeight * self.numStages and  0 <= j < self.mapWidth * self.numStages)
 
     def close(self):
         pass

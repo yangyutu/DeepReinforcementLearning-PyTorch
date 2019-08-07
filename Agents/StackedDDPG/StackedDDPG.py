@@ -1,7 +1,7 @@
 import torch
 import os
 import numpy as np
-from Agents.Core.ReplayMemory import ReplayMemory, Transition
+from Agents.Core.ExtendedReplayMemory import ExtendedReplayMemory, ExtendedTransition
 from Agents.DDPG.DDPG import DDPGAgent
 import pickle
 
@@ -94,6 +94,7 @@ class StackedDDPGAgent(DDPGAgent):
             self.actorNet = self.actorNets[n]
             self.criticNet = self.criticNets[n]
 
+            # actorNet_target is used to select best action in the next state
             self.actorNet_target = self.actorNet_targets[n + 1] if n < len(self.actorNets) - 1 \
                 else self.actorNet_targets[n]
 
