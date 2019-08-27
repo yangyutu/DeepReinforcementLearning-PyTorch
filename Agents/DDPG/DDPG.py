@@ -123,7 +123,7 @@ class DDPGAgent:
         self.losses = []
         self.rewards = []
 
-
+        self.runningAvgEpisodeReward = 0.0
 
     def select_action(self, net, state, noiseFlag = False):
 
@@ -264,65 +264,68 @@ class DDPGAgent:
         pass
 
 
+    def train_one_episode(self):
+
+        print("episode index:" + str(self.epIdx))
+        state = self.env.reset()
+        done = False
+        rewardSum = 0
+
+        for stepCount in range(self.episodeLength):
+
+            # any work to be done before select actions
+            self.work_before_step(state)
+
+            action = self.select_action(self.actorNet, state, noiseFlag=True)
+
+            nextState, reward, done, info = self.env.step(action)
+
+            if stepCount == 0:
+                print("at step 0:")
+                print(info)
+
+            if done:
+                nextState = None
+
+            # learn the transition
+            self.update_net(state, action, nextState, reward, info)
+
+            state = nextState
+            rewardSum += reward * pow(self.gamma, stepCount)
+            self.globalStepCount += 1
+
+            if self.verbose:
+                print('action: ' + str(action))
+                print('state:')
+                print(nextState)
+                print('reward:')
+                print(reward)
+                print('info')
+                print(info)
+
+            if done:
+                break
+
+        self.runningAvgEpisodeReward = (self.runningAvgEpisodeReward * self.epIdx + rewardSum) / (self.epIdx + 1)
+        print("done in step count: {}".format(stepCount))
+        print("reward sum = " + str(rewardSum))
+        print("running average episode reward sum: {}".format(self.runningAvgEpisodeReward))
+        print(info)
+
+        self.rewards.append([self.epIdx, stepCount, self.globalStepCount, rewardSum, self.runningAvgEpisodeReward])
+        if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
+            self.save_checkpoint()
+
     def train(self):
 
-        runningAvgEpisodeReward = 0.0
+        # continue on historical training
         if len(self.rewards) > 0:
-            runningAvgEpisodeReward = self.rewards[-1][-1]
+            self.runningAvgEpisodeReward = self.rewards[-1][-1]
 
         for trainStepCount in range(self.trainStep):
-
-            print("episode index:" + str(self.epIdx))
-            state = self.env.reset()
-            done = False
-            rewardSum = 0
-
-            for stepCount in range(self.episodeLength):
-
-                # any work to be done before select actions
-                self.work_before_step(state)
-
-                action = self.select_action(self.actorNet, state, noiseFlag=True)
-
-                nextState, reward, done, info = self.env.step(action)
-
-                if stepCount == 0:
-                    print("at step 0:")
-                    print(info)
-
-                if done:
-                    nextState = None
-
-                # learn the transition
-                self.update_net(state, action, nextState, reward, info)
-
-                state = nextState
-                rewardSum += reward * pow(self.gamma, stepCount)
-                self.globalStepCount += 1
-
-                if self.verbose:
-                    print('action: ' + str(action))
-                    print('state:')
-                    print(nextState)
-                    print('reward:')
-                    print(reward)
-                    print('info')
-                    print(info)
-
-                if done:
-                    break
-
-            runningAvgEpisodeReward = (runningAvgEpisodeReward*self.epIdx + rewardSum)/(self.epIdx + 1)
-            print("done in step count: {}".format(stepCount))
-            print("reward sum = " + str(rewardSum))
-            print("running average episode reward sum: {}".format(runningAvgEpisodeReward))
-            print(info)
-
-            self.rewards.append([self.epIdx, stepCount, self.globalStepCount, rewardSum, runningAvgEpisodeReward])
-            if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
-                self.save_checkpoint()
-
+            self.train_one_episode()
             self.epIdx += 1
+
         self.save_all()
 
     def saveLosses(self, fileName):
