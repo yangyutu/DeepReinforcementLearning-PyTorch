@@ -316,6 +316,8 @@ class DDPGAgent:
         if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
             self.save_checkpoint()
 
+        self.epIdx += 1
+
     def train(self):
 
         # continue on historical training
@@ -324,7 +326,7 @@ class DDPGAgent:
 
         for trainStepCount in range(self.trainStep):
             self.train_one_episode()
-            self.epIdx += 1
+            
 
         self.save_all()
 

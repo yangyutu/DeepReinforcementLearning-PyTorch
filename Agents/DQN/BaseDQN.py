@@ -43,6 +43,7 @@ class BaseDQNAgent(object):
         self.losses = []
         self.rewards = []
         self.nStepBuffer = []
+        self.runningAvgEpisodeReward = 0.0
 
     def read_config(self):
         self.trainStep = self.config['trainStep']

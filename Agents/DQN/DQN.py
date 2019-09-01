@@ -60,70 +60,70 @@ class DQNAgent(BaseDQNAgent):
     def work_before_step(self, state):
         self.epsThreshold = self.epsilon_by_step(self.globalStepCount)
 
+    def train_one_episode(self):
+
+        print("episode index:" + str(self.epIdx))
+        state = self.env.reset()
+        done = False
+        rewardSum = 0
+
+        # any work to be done at episode begin
+        self.work_At_Episode_Begin()
+
+        for stepCount in range(self.episodeLength):
+
+            # any work to be done before select actions
+            self.work_before_step(state)
+
+            action = self.select_action(self.policyNet, state, self.epsThreshold)
+
+            nextState, reward, done, info = self.env.step(action)
+
+            if stepCount == 0:
+                print("at step 0:")
+                print(info)
+
+            if done:
+                nextState = None
+
+            # learn the transition
+            self.update_net(state, action, nextState, reward, info)
+
+            state = nextState
+            rewardSum += reward * pow(self.gamma, stepCount)
+            self.globalStepCount += 1
+
+            if self.verbose:
+                print('action: ' + str(action))
+                print('state:')
+                print(nextState)
+                print('reward:')
+                print(reward)
+                print('info')
+                print(info)
+
+            if done:
+                break
+
+        self.runningAvgEpisodeReward = (self.runningAvgEpisodeReward * self.epIdx + rewardSum) / (self.epIdx + 1)
+        print("done in step count: {}".format(stepCount))
+        print("reward sum = " + str(rewardSum))
+        print("running average episode reward sum: {}".format(self.runningAvgEpisodeReward))
+        print(info)
+
+        self.rewards.append([self.epIdx, stepCount, self.globalStepCount, rewardSum, self.runningAvgEpisodeReward])
+        if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
+            self.save_checkpoint()
+
+        self.epIdx += 1
+
     def train(self):
 
-        runningAvgEpisodeReward = 0.0
         if len(self.rewards) > 0:
-            runningAvgEpisodeReward = self.rewards[-1][-1]
+            self.runningAvgEpisodeReward = self.rewards[-1][-1]
 
         for trainStepCount in range(self.trainStep):
-
-            print("episode index:" + str(self.epIdx))
-            state = self.env.reset()
-            done = False
-            rewardSum = 0
-
-            # any work to be done at episode begin
-            self.work_At_Episode_Begin()
-
-            for stepCount in range(self.episodeLength):
-
-                # any work to be done before select actions
-                self.work_before_step(state)
-
-                action = self.select_action(self.policyNet, state, self.epsThreshold)
-
-                nextState, reward, done, info = self.env.step(action)
-
-                if stepCount == 0:
-                    print("at step 0:")
-                    print(info)
-
-                if done:
-                    nextState = None
-
-                # learn the transition
-                self.update_net(state, action, nextState, reward, info)
-
-                state = nextState
-                rewardSum += reward * pow(self.gamma, stepCount)
-                self.globalStepCount += 1
-
-                if self.verbose:
-                    print('action: ' + str(action))
-                    print('state:')
-                    print(nextState)
-                    print('reward:')
-                    print(reward)
-                    print('info')
-                    print(info)
-
-                if done:
-                    break
-
-            runningAvgEpisodeReward = (runningAvgEpisodeReward*self.epIdx + rewardSum)/(self.epIdx + 1)
-            print("done in step count: {}".format(stepCount))
-            print("reward sum = " + str(rewardSum))
-            print("running average episode reward sum: {}".format(runningAvgEpisodeReward))
-            print(info)
-
-            self.rewards.append([self.epIdx, stepCount, self.globalStepCount, rewardSum, runningAvgEpisodeReward])
-            if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
-                self.save_checkpoint()
-
-
-
-            self.epIdx += 1
+            self.train_one_episode()
         self.save_all()
 
     def store_experience(self, state, action, nextState, reward, info):
