@@ -14,11 +14,8 @@ import math
 import pickle
 from copy import deepcopy
 
-class NumpyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return json.JSONEncoder.default(self, obj)
+# DQN agent uses synchronized environment for training
+
 
 class DQNSynAgent(DQNAgent):
 
@@ -37,7 +34,7 @@ class DQNSynAgent(DQNAgent):
             self.successRepeatTime = self.config['successRepeatTime']
 
     def select_action(self, net, states, epsThreshold):
-
+        # return a list of actions
         # get a random number so that we can do epsilon exploration
         randNum = random.random()
         if randNum > epsThreshold:
@@ -58,6 +55,8 @@ class DQNSynAgent(DQNAgent):
     def train(self):
 
         runningAvgEpisodeReward = 0.0
+
+        # get a list of reset states
         states = self.env.reset()
         states = states.tolist()
         dummyStates = deepcopy(states)
@@ -96,8 +95,6 @@ class DQNSynAgent(DQNAgent):
             rewardSum += np.sum(rewards*np.power(self.gamma, stepCountList))
             stepCountList += 1
 
-
-
             if np.any(dones):
                 idx = np.where(dones == True)
                 # adjust for states to avoid None in states
@@ -115,14 +112,9 @@ class DQNSynAgent(DQNAgent):
                 #print('reward sum: ', rewardSum)
                 print("running average episode reward sum: {}".format(runningAvgEpisodeReward))
 
-
-
             self.rewards.append([self.epIdx, self.globalStepCount, rewardSum, runningAvgEpisodeReward])
             if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
                 self.save_checkpoint()
-
-
-
 
         self.save_all()
 
