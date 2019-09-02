@@ -19,7 +19,7 @@ torch.manual_seed(1)
 
 config = dict()
 
-config['trainStep'] = 100000
+config['trainStep'] = 1000
 config['epsThreshold'] = 0.1
 config['targetNetUpdateStep'] = 100
 config['memoryCapacity'] = 2000
@@ -35,6 +35,7 @@ config['netUpdateOption'] = 'doubleQ'
 config['netUpdateFrequency'] = 1
 config['priorityMemory_absErrUpper'] = 5
 config['numWorkers'] = 5
+config['netUpdateStep'] = 5
 
 env = StablizerOneD()
 N_S = env.stateDim
@@ -63,15 +64,18 @@ def make_env(config, i):
     return _thunk
 
 numWorkers = config['numWorkers']
-envs = [make_env(config,  i) for i in range(numWorkers)]
-if numWorkers > 1:
-    envs = SubprocVecEnv(envs)
-else:
-    envs = SubprocVecEnv(envs)
 
-agent = DQNSynAgent(config, policyNet, targetNet, envs, optimizer, torch.nn.MSELoss(reduction='none'), N_A)
+if __name__=='__main__':
+
+    envs = [make_env(config,  i) for i in range(numWorkers)]
+    if numWorkers > 1:
+        envs = SubprocVecEnv(envs)
+    else:
+        envs = SubprocVecEnv(envs)
+
+    agent = DQNSynAgent(config, policyNet, targetNet, envs, optimizer, torch.nn.MSELoss(reduction='none'), N_A)
 
 
-agent.train()
+    agent.train()
 
-print('done Training')
+    print('done Training')

@@ -25,10 +25,10 @@ def plotPolicy(x, policy):
 # first construct the neutral network
 config = dict()
 
-config['trainStep'] = 100
+config['trainStep'] = 1000
 config['epsThreshold'] = 0.1
 config['targetNetUpdateStep'] = 100
-config['memoryCapacity'] = 200
+config['memoryCapacity'] = 2000
 config['trainBatchSize'] = 32
 config['gamma'] = 0.9
 config['learningRate'] = 0.001

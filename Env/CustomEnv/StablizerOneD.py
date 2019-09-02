@@ -15,7 +15,7 @@ class StablizerOneD(gym.Env):
         self.targetState = 0.0
         self.nbActions = 3
         self.stateDim = 1
-        self.endStep = 200
+        self.endStep = 100
         self.randomSeed = seed
 
         # import parameter for vector env
@@ -35,18 +35,18 @@ class StablizerOneD(gym.Env):
         self.infoDict['endBeforeDone'] = False
         self.stepCount += 1
         self.infoDict['stepCount'] = self.stepCount
-        self.currentState += (random.random()-0.5)*0.4
+        self.currentState += (random.random()-0.5)*0.04
         if action == 1: # move to positive
             self.currentState += 0.1
         if action == 2: # move to negative
             self.currentState -= 0.1
 
-        if abs(self.currentState) < 2:
-            reward = - abs(self.currentState)
-            done = False
-        else:
-            reward = - abs(self.currentState) * (self.endStep - self.stepCount)
+        reward = 0.0
+        done = False
+        if abs(self.currentState) < 0.1:
+            reward = 1
             done = True
+            self.infoDict['done_state'] = self.currentState
 
         if self.stepCount > self.endStep:
             done = True
@@ -59,7 +59,7 @@ class StablizerOneD(gym.Env):
         #self.infoDict['reset'] = True
         self.infoDict['stepCount'] = 0
         self.stepCount = 0
-        self.currentState = (random.random() - 0.5)-0.1
+        self.currentState = (random.random() - 0.5) - 0.1
         self.currentState = 0.514
         return np.array([self.currentState])
 

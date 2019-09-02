@@ -113,7 +113,7 @@ class DQNSynAgent(DQNAgent):
                 print("running average episode reward sum: {}".format(runningAvgEpisodeReward))
 
             self.rewards.append([self.epIdx, self.globalStepCount, rewardSum, runningAvgEpisodeReward])
-            if self.config['logFlag'] and self.epIdx % self.config['logFrequency'] == 0:
+            if self.config['logFlag'] and trainStepCount % (self.config['logFrequency']) == 0:
                 self.save_checkpoint()
 
         self.save_all()

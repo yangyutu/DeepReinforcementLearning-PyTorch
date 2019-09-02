@@ -202,23 +202,24 @@ class DQNAgent(BaseDQNAgent):
         # update net with specified frequency
         if self.globalStepCount % self.netUpdateFrequency == 0:
             # sample experience
-            info = {}
-            if self.priorityMemoryOption:
-                transitions_raw, b_idx, ISWeights = self.memory.sample(self.trainBatchSize)
-                info['batchIdx'] = b_idx
-                info['ISWeights'] = torch.from_numpy(ISWeights.astype(np.float32)).to(self.device)
-            else:
-                transitions_raw= self.memory.sample(self.trainBatchSize)
+            for nStep in range(self.netUpdateStep):
+                info = {}
+                if self.priorityMemoryOption:
+                    transitions_raw, b_idx, ISWeights = self.memory.sample(self.trainBatchSize)
+                    info['batchIdx'] = b_idx
+                    info['ISWeights'] = torch.from_numpy(ISWeights.astype(np.float32)).to(self.device)
+                else:
+                    transitions_raw= self.memory.sample(self.trainBatchSize)
 
-            loss = self.update_net_on_transitions(transitions_raw, self.netLossFunc, 1, updateOption=self.netUpdateOption, netGradClip=self.netGradClip, info=info)
+                loss = self.update_net_on_transitions(transitions_raw, self.netLossFunc, 1, updateOption=self.netUpdateOption, netGradClip=self.netGradClip, info=info)
 
-            if self.globalStepCount % self.lossRecordStep == 0:
-                self.losses.append([self.globalStepCount, self.epIdx, loss])
+                if self.globalStepCount % self.lossRecordStep == 0:
+                    self.losses.append([self.globalStepCount, self.epIdx, loss])
 
-            if self.learnStepCounter % self.targetNetUpdateStep == 0:
-                self.targetNet.load_state_dict(self.policyNet.state_dict())
+                if self.learnStepCounter % self.targetNetUpdateStep == 0:
+                    self.targetNet.load_state_dict(self.policyNet.state_dict())
 
-            self.learnStepCounter += 1
+                self.learnStepCounter += 1
 
     def prepare_minibatch(self, transitions_raw):
         # first store memory
