@@ -11,6 +11,7 @@ import simplejson as json
 import os
 import math
 import pickle
+from copy import deepcopy
 
 
 
@@ -31,6 +32,21 @@ class StackedDQNAgent(DQNAgent):
         self.optimizer = None
         self.timeIndexMap = timeIndexMap
         self.init_memory()
+
+
+    def read_config(self):
+        super(StackedDQNAgent, self).read_config()
+
+        self.numStages = self.config['numStages']
+
+
+        if isinstance(self.gamma, (int, float)):
+            self.multiStageGamma = [self.gamma for _ in range(self.numStages)]
+
+        if isinstance(self.gamma, (list, tuple)):
+            assert len(self.gamma) == self.numStages
+            self.multiStageGamma = deepcopy(self.gamma)
+
 
     def initialization(self):
         # move model to correct device
@@ -70,8 +86,8 @@ class StackedDQNAgent(DQNAgent):
         timeStep = state['stageID']
         done['id'] = self.globalStepCount
         transition = ExtendedTransition(state, action, nextState, reward, done)
-        if done['stage'][0] and state['state'][1] < 1 and state['stageID'] == 0:
-            print('issue!!!!!!!')
+        #if done['stage'][0] and state['state'][1] < 1 and state['stageID'] == 0:
+        #    print('issue!!!!!!!')
         self.memories[timeStep].push(transition)
 
     def train(self):
@@ -111,7 +127,7 @@ class StackedDQNAgent(DQNAgent):
                 self.update_net(state, action, nextState, reward, doneDict, info)
 
                 state = nextState
-                rewardSum += reward * pow(self.gamma, stepCount)
+                rewardSum += reward * pow(self.multiStageGamma[timeStep], stepCount)
                 self.globalStepCount += 1
 
                 if self.verbose:
@@ -152,7 +168,7 @@ class StackedDQNAgent(DQNAgent):
         if self.globalStepCount % self.netUpdateFrequency == 0:
             # sample experience
 
-            for i in range(len(self.memories) - 1, -1, -1):
+            for i in range(self.numStages - 1, -1, -1):
                 if len(self.memories[i]) < self.trainBatchSize:
                     continue
 
@@ -160,11 +176,12 @@ class StackedDQNAgent(DQNAgent):
                 self.policyNet = self.policyNets[i]
                 self.targetNet = self.targetNets[i]
                 self.optimizer = self.optimizers[i]
+                self.gamma = self.multiStageGamma[i]
 
                 # when finishing current stage, we need the value from next stage to guide the learning process
                 # when we are currently at final stage and finishes, we do not from value target from Q function
                 if self.netUpdateOption == 'targetNet' or self.netUpdateOption == 'doubleQ':
-                    if i < (len(self.memories) - 1):
+                    if i < (self.numStages - 1):
                         self.nextStageTargetNet = self.targetNets[i + 1]
                     else:
                         self.nextStageTargetNet = None

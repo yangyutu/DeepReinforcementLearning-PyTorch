@@ -29,7 +29,7 @@ class CooperativeSimpleMazeTwoD(gym.Env):
 
         self.endStep = self.config['episodeLength']
         self.mapHeight = self.config.get('mapHeight', 5)
-        self.mapWidth = self.config.get('mapWidth', 6)
+        self.mapWidth = self.config.get('mapWidth', 5)
         self.timeScale = self.config.get('timeScale', 80.0)
         self.lengthScale = self.config.get('lengthScale', 5.0)
 
@@ -99,7 +99,7 @@ class CooperativeSimpleMazeTwoD(gym.Env):
         if action == 3 and not self.is_on_obstacle(i, j + 1):
             self.currentState[1] += 1
 
-        if self.currentState[1] > (self.stageID + 1 ) * self.mapWidth:
+        if self.currentState[1] >= (self.stageID + 1 ) * self.mapWidth:
             # pass job to agent 1
             print('job passage', self.currentState)
             self.done['stage'][self.stageID] = True
@@ -131,14 +131,14 @@ class CooperativeSimpleMazeTwoD(gym.Env):
             for i in range(self.stageID):
                 self.done['stage'][i] = True
 
-        print('start stage:', self.stageID)
+        print('start:', self.stageID)
         self.stepCount = 0
 
         xposition = random.randint(0, self.mapHeight * self.numStages - 1)
         if self.stageID == 0:
             self.currentState = np.array([xposition, 0.0])
         else:
-            self.currentState = np.array([xposition, self.mapWidth * self.stageID + 1])
+            self.currentState = np.array([xposition, self.mapWidth * self.stageID])
 
         self.targetState = np.array([self.mapHeight * self.numStages - 1.0, self.mapWidth * self.numStages - 1.0] )
 
@@ -150,7 +150,7 @@ class CooperativeSimpleMazeTwoD(gym.Env):
         return state
 
     def is_on_obstacle(self, i, j):
-        return not (0 <= i < self.mapHeight * self.numStages and  0 <= j < self.mapWidth * self.numStages)
+        return not (0 <= i < self.mapHeight * self.numStages and  self.mapWidth * self.stageID <= j < self.mapWidth * self.numStages)
 
     def close(self):
         pass
@@ -160,3 +160,72 @@ class CooperativeSimpleMazeTwoD(gym.Env):
 
     def render(self, mode='human'):
         pass
+
+class CooperativeSimpleMazeTwoDContinuous(CooperativeSimpleMazeTwoD):
+
+    def __init__(self, config):
+        super(CooperativeSimpleMazeTwoDContinuous, self).__init__()
+        self.nbActions = 2
+
+    def calReward(self):
+
+        reward = 0.0
+
+        # if pass the time limit and not finish give zero reward
+        if self.stepCount > self.endStep:
+            self.done['stage'] = [True for _ in range(self.numStages)]
+            self.done['global'] = True
+            print('not finish ', self.currentState, self.stageID)
+            return reward, copy.deepcopy(self.done)
+
+
+
+
+        if self.stepCount <= self.endStep and self.stageID == (self.numStages - 1) and self.isTermnate():
+            self.done['stage'][self.stageID] = True
+            self.done['global'] = True
+            reward = 1.0
+            print('finish ', self.currentState, reward, self.stageID)
+
+
+        return reward, copy.deepcopy(self.done)
+
+    def isTermnate(self):
+        dist = self.currentState - self.targetState
+        if np.linalg.norm(dist, ord=np.inf) < 0.5:
+            return True
+        else:
+            return False
+
+
+    def step(self, action):
+        if self.stageID == 0:
+            self.stepCount += 1
+        else:
+            self.stepCount += 1
+
+        i = self.currentState[0]
+        j = self.currentState[1]
+
+        newPosition = self.currentState + action
+        if not self.is_on_obstacle(newPosition[0], newPosition[1]):
+            self.currentState = newPosition
+
+        if self.currentState[1] >= (self.stageID + 1 ) * self.mapWidth:
+            # pass job to agent 1
+            print('job passage', self.currentState)
+            self.done['stage'][self.stageID] = True
+            self.stageID += 1
+
+
+        reward, done = self.calReward()
+        state = {'stageID': self.stageID,
+                 'state': np.array([self.currentState[0] / self.lengthScale, \
+                                    self.currentState[1] / self.lengthScale])
+                 }
+
+
+        if self.multiStage:
+            return state, reward, done, {'currentState': self.currentState.copy()}
+        else:
+            return state, reward, done['global'], {'currentState': self.currentState.copy()}
