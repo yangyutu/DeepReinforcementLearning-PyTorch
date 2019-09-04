@@ -60,18 +60,11 @@ class MultiStageStackedController:
     def __init__(self, config, agents, env):
         self.config = config
         self.env = env
+        self.agents = agents
         self.initialization()
 
 
     def initialization(self):
-        # move model to correct device
-        for i in range(len(self.policyNets)):
-            self.policyNets[i] = self.policyNets[i].to(self.device)
-
-        # in case targetNet is None
-        for i in range(len(self.targetNets)):
-            if self.targetNets[i] is not None:
-                self.targetNets[i] = self.targetNets[i].to(self.device)
 
         self.dirName = 'Log/'
         if 'dataLogFolder' in self.config:
@@ -87,15 +80,30 @@ class MultiStageStackedController:
         self.rewards = []
         self.nStepBuffer = []
 
+        self.numStages = self.config['numStages']
 
+        self.trainStep = self.config['trainStep']
 
-    def select_action(self, state):
+        self.episodeLength = 500
+        if 'episodeLength' in self.config:
+            self.episodeLength = self.config['episodeLength']
+
+        self.netUpdateFrequency = 1
+        if 'netUpdateFrequency' in self.config:
+            self.netUpdateFrequency = self.config['netUpdateFrequency']
+
+        self.gamma = self.config['gamma']
+        self.verbose = False
+
+    def select_action(self, state, noiseFlag = True):
 
         # first store memory
         stageID = state['stageID']
+        self.agents[stageID].globalStepCount += 1
+        self.agents[stageID].work_before_step()
+        action = self.agents[stageID].select_action(state = state['state'], noiseFlag = True)
 
-        return self.agents[stageID].select_action(state)
-
+        return action
 
 
     def train(self):
@@ -112,7 +120,6 @@ class MultiStageStackedController:
             rewardSum = 0
 
             for stepCount in range(self.episodeLength):
-
 
 
                 action = self.select_action(state)
@@ -158,12 +165,17 @@ class MultiStageStackedController:
             self.epIdx += 1
         self.save_all()
 
-    def update_net(self, state, action, nextState, reward, done, info):
+    def update_net(self, state, action, nextState, reward, doneDict, info):
 
         # first store memory
         stageID = state['stageID']
 
-        self.agents[stageID].store_experience(state, action, nextState, reward, done, info)
+        if doneDict['stage'][stageID] and doneDict['global']:
+            # if stage and global done, label next state as None
+            self.agents[stageID].store_experience(state['state'], action, None, reward, True, info)
+        else:
+            self.agents[stageID].store_experience(state['state'], action, nextState['state'], reward, doneDict['stage'][stageID], info)
+
 
 
         # update net with specified frequency
@@ -171,10 +183,10 @@ class MultiStageStackedController:
             # sample experience
 
             for i in range(self.numStages - 1, -1, -1):
-                if i < (len(self.numStages) - 1):
-                    self.agents[i].update_on_memory_given_target(targetAgent=self.agent[i + 1])
+                if i < (self.numStages - 1):
+                    self.agents[i].update_net_on_memory_given_target(targetAgent=self.agents[i + 1])
                 else:
-                    self.agents[i].update_on_memory_given_target(targetAgent=None)
+                    self.agents[i].update_net_on_memory_given_target(targetAgent=None)
 
             self.learnStepCounter += 1
 

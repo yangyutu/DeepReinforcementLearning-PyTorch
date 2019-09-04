@@ -1,5 +1,3 @@
-
-
 import os
 import torch
 import json
@@ -115,11 +113,16 @@ class BaseDQNAgent(object):
         if 'netUpdateStep' in self.config:
             self.netUpdateStep = self.config['netUpdateStep']
 
-    def select_action(self, net, state, epsThreshold):
+    def select_action(self, net=None, state=None, epsThreshold=None, noiseFlag = True):
 
-        # get a random number so that we can do epsilon exploration
+        if net is None:
+            net = self.policyNet
+        if epsThreshold is None:
+            epsThreshold = self.epsThreshold
+
         randNum = random.random()
-        if randNum > epsThreshold:
+        # get a random number so that we can do epsilon exploration
+        if noiseFlag and randNum > epsThreshold:
             with torch.no_grad():
                 # self.policyNet(torch.from_numpy(state.astype(np.float32)).unsqueeze(0))
                 # here state[np.newaxis,:] is to add a batch dimension

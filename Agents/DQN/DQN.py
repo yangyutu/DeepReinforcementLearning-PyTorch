@@ -57,7 +57,7 @@ class DQNAgent(BaseDQNAgent):
         # clear the nstep buffer
         self.nStepBuffer.clear()
 
-    def work_before_step(self, state):
+    def work_before_step(self, state=None):
         self.epsThreshold = self.epsilon_by_step(self.globalStepCount)
 
     def train_one_episode(self):
@@ -294,53 +294,6 @@ class DQNAgent(BaseDQNAgent):
 
             return loss.item()
 
-    def perform_random_exploration(self, episodes, memory=None):
-        for epIdx in range(episodes):
-            print("episode index:" + str(epIdx))
-            state = self.env.reset()
-            done = False
-            rewardSum = 0
-            stepCount = 0
-            while not done:
-                action = random.randint(0, self.numAction-1)
-                nextState, reward, done, _ = self.env.step(action)
-                stepCount += 1
-                memory.push(state, action, nextState, reward)
-                state = nextState
-                rewardSum += reward
-                if done:
-                    print("done in step count: {}".format(stepCount))
-                    break
-            print("reward sum = " + str(rewardSum))
-
-    def perform_on_policy(self, episodes, policy, memory=None):
-
-        for epIdx in range(episodes):
-            print("episode index:" + str(epIdx))
-            state = self.env.reset()
-            done = False
-            rewardSum = 0
-            stepCount = 0
-            while not done:
-                action = self.select_action(self.policyNet, state, -0.01)
-                nextState, reward, done, info = self.env.step(action)
-
-                if memory is not None:
-                    memory.push(epIdx, stepCount, state, action, nextState, reward, info)
-                state = nextState
-                rewardSum += reward
-                if done:
-                    print("done in step count: {}".format(stepCount))
-                    break
-
-                if stepCount > self.episodeLength:
-                    break
-
-                stepCount += 1
-            print("reward sum = " + str(rewardSum))
-
-    def testPolicyNet(self, episodes, memory = None):
-        return self.perform_on_policy(episodes, self.getPolicy, memory)
 
     def save_all(self):
         prefix = self.dirName + self.identifier + 'Finalepoch' + str(self.epIdx)
