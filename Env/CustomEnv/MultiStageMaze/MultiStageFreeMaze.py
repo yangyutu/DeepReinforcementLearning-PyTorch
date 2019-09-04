@@ -131,7 +131,7 @@ class CooperativeSimpleMazeTwoD(gym.Env):
             for i in range(self.stageID):
                 self.done['stage'][i] = True
 
-        print('start:', self.stageID)
+        print('start stage:', self.stageID)
         self.stepCount = 0
 
         xposition = random.randint(0, self.mapHeight * self.numStages - 1)

@@ -117,6 +117,8 @@ class DQNAgent(BaseDQNAgent):
 
         self.epIdx += 1
 
+        return stepCount, rewardSum
+
     def train(self):
 
         if len(self.rewards) > 0:
