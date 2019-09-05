@@ -46,12 +46,18 @@ class DQNMultiStageUnit(DQNAgent):
             nonFinalNextState, nonFinalMask, finalNextState, finalMask = self.stateProcessor(transitions.next_state, self.device)
         else:
             state = torch.tensor(transitions.state, device=self.device, dtype=torch.float32)
-
+            nextState = torch.tensor(transitions.next_state, device=self.device, dtype=torch.float32)
+            # final mask is one that have stage done
             finalMask = torch.tensor(transitions.done, device=self.device, dtype=torch.uint8)
             nonFinalMask = 1 - finalMask
-            finalNextState = [state[i] for i in range(self.trainBatchSize) if finalMask[i]]
-            nonFinalNextState = [state[i] for i in range(self.trainBatchSize) if nonFinalMask[i]]
+            finalNextState = [nextState[i] for i in range(self.trainBatchSize) if finalMask[i]]
+            nonFinalNextState = [nextState[i] for i in range(self.trainBatchSize) if nonFinalMask[i]]
 
+        if len(nonFinalNextState):
+            nonFinalNextState = torch.stack(nonFinalNextState)
+
+        if len(finalNextState):
+            finalNextState = torch.stack(finalNextState)
 
         return state, nonFinalMask, nonFinalNextState, finalMask, finalNextState, action, reward
 
@@ -69,21 +75,22 @@ class DQNMultiStageUnit(DQNAgent):
         # calculate Qvalues based on selected action batch
         QValues = self.policyNet(state).gather(1, action)
 
-
         # Here we detach because we do not want gradient flow from target values to net parameters
         QNext = torch.zeros(self.trainBatchSize, device=self.device, dtype=torch.float32)
 
         if len(nonFinalNextState):
-            nonFinalNextState = torch.stack(nonFinalNextState)
-            if targetAgent is None:
-                QNext[nonFinalMask] = self.targetNet(nonFinalNextState).max(1)[0].detach()
+        # if we do not have stage done
+        # we use our own target net to bootstrap
+            QNext[nonFinalMask] = self.targetNet(nonFinalNextState).max(1)[0].detach()
 
         if len(finalNextState):
-            finalNextState = torch.stack(finalNextState)
+        # if we have stage done,
+        # 1) if it is not the last stage, we use external target agent to bootstrap
+        # 2) if it is the last stage, we do not bootstrap
             if targetAgent is not None:
                 QNext[finalMask] = targetAgent.evaluate_state_value(finalNextState)
 
-        targetValues = reward + (self.gamma ** self.nStepForward) * QNext.unsqueeze(-1)
+        targetValues = reward + (self.gamma) * QNext.unsqueeze(-1)
 
         # Compute loss
         loss_single = self.netLossFunc(QValues, targetValues)

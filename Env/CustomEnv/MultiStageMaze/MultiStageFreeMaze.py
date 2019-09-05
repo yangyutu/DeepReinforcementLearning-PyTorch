@@ -126,7 +126,7 @@ class CooperativeSimpleMazeTwoD(gym.Env):
         if self.epiCount >= 500 * self.numStages:
             self.stageID = 0
         else:
-            index = self.epiCount // 300
+            index = self.epiCount // 500
             self.stageID = max(self.numStages - 1 - index, 0)
             for i in range(self.stageID):
                 self.done['stage'][i] = True
@@ -164,7 +164,7 @@ class CooperativeSimpleMazeTwoD(gym.Env):
 class CooperativeSimpleMazeTwoDContinuous(CooperativeSimpleMazeTwoD):
 
     def __init__(self, config):
-        super(CooperativeSimpleMazeTwoDContinuous, self).__init__()
+        super(CooperativeSimpleMazeTwoDContinuous, self).__init__(config)
         self.nbActions = 2
 
     def calReward(self):
@@ -192,7 +192,7 @@ class CooperativeSimpleMazeTwoDContinuous(CooperativeSimpleMazeTwoD):
 
     def isTermnate(self):
         dist = self.currentState - self.targetState
-        if np.linalg.norm(dist, ord=np.inf) < 0.5:
+        if np.linalg.norm(dist, ord=np.inf) < 2:
             return True
         else:
             return False
@@ -203,9 +203,6 @@ class CooperativeSimpleMazeTwoDContinuous(CooperativeSimpleMazeTwoD):
             self.stepCount += 1
         else:
             self.stepCount += 1
-
-        i = self.currentState[0]
-        j = self.currentState[1]
 
         newPosition = self.currentState + action
         if not self.is_on_obstacle(newPosition[0], newPosition[1]):

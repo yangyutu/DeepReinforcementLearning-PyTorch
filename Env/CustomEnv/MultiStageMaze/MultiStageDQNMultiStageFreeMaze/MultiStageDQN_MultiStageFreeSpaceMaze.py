@@ -36,13 +36,13 @@ torch.manual_seed(2)
 # first construct the neutral network
 config = dict()
 
-config['trainStep'] = 3000
+config['trainStep'] = 2000
 config['epsThreshold'] = 0.5
 config['epsilon_start'] = 0.5
 config['epsilon_final'] = 0.05
 config['epsilon_decay'] = 500
 config['episodeLength'] = 200
-config['numStages'] = 2
+config['numStages'] = 5
 config['targetNetUpdateStep'] = 10
 config['memoryCapacity'] = 10000
 config['trainBatchSize'] = 64
@@ -53,7 +53,7 @@ config['logFlag'] = False
 config['logFileName'] = 'SimpleMazeLog/traj'
 config['logFrequency'] = 500
 config['priorityMemoryOption'] = False
-config['netUpdateOption'] = 'doubleQ'
+config['netUpdateOption'] = 'targetNet'
 config['netUpdateFrequency'] = 1
 config['priorityMemory_absErrUpper'] = 5
 config['device'] = 'cpu'
@@ -99,4 +99,39 @@ for i in range(config['numStages']):
 
 
 controller = MultiStageStackedController(config, agents, env)
+
+
+policyFlag = True
+
+nPeriods = config['numStages']
+
+if policyFlag:
+    for n in range(nPeriods):
+        policy = np.zeros((env.mapHeight * env.numStages, env.mapWidth * env.numStages), dtype=np.int32)
+        value = np.zeros((env.mapHeight * env.numStages, env.mapWidth * env.numStages), dtype=np.float)
+        for i in range(policy.shape[0]):
+            for j in range(policy.shape[1]):
+                state = torch.tensor([i / env.lengthScale, \
+                                            j / env.lengthScale], dtype=torch.float32)
+                policy[i, j] = controller.agents[n].select_action(state=state, noiseFlag=False)
+                stateValue = controller.agents[n].evaluate_state_value(state.unsqueeze(dim=0))
+                value[i, j] = stateValue
+        np.savetxt('SimpleMazePolicyBeforeTrain_stage' + str(n) + '.txt', policy, fmt='%d', delimiter='\t')
+        np.savetxt('SimpleMazeValueBeforeTrain_stage' + str(n) + '.txt', value, fmt='%f', delimiter='\t')
+
+
 controller.train()
+
+if policyFlag:
+    for n in range(nPeriods):
+        policy = np.zeros((env.mapHeight * env.numStages, env.mapWidth * env.numStages), dtype=np.int32)
+        value = np.zeros((env.mapHeight * env.numStages, env.mapWidth * env.numStages), dtype=np.float)
+        for i in range(policy.shape[0]):
+            for j in range(policy.shape[1]):
+                state = torch.tensor([i / env.lengthScale, \
+                                            j / env.lengthScale], dtype=torch.float32)
+                policy[i, j] = controller.agents[n].select_action(state=state, noiseFlag=False)
+                stateValue = controller.agents[n].evaluate_state_value(state.unsqueeze(dim=0))
+                value[i, j] = stateValue
+        np.savetxt('SimpleMazePolicyAfterTrain_stage' + str(n) + '.txt', policy, fmt='%d', delimiter='\t')
+        np.savetxt('SimpleMazeValueAfterTrain_stage' + str(n) + '.txt', value, fmt='%f', delimiter='\t')

@@ -131,8 +131,6 @@ class MultiStageStackedController:
                 if stepCount == 0:
                     print("at step 0:")
                     print(info)
-                if done:
-                    nextState = None
 
                 self.update_net(state, action, nextState, reward, doneDict, info)
 
@@ -170,11 +168,11 @@ class MultiStageStackedController:
         # first store memory
         stageID = state['stageID']
 
-        if doneDict['stage'][stageID] and doneDict['global']:
-            # if stage and global done, label next state as None
-            self.agents[stageID].store_experience(state['state'], action, None, reward, True, info)
-        else:
-            self.agents[stageID].store_experience(state['state'], action, nextState['state'], reward, doneDict['stage'][stageID], info)
+        # if doneDict['stage'][stageID] and doneDict['global']:
+        #     # if stage and global done, label next state as None
+        #     self.agents[stageID].store_experience(state['state'], action, None, reward, True, info)
+        # else:
+        self.agents[stageID].store_experience(state['state'], action, nextState['state'], reward, doneDict['stage'][stageID], info)
 
 
 
@@ -184,8 +182,10 @@ class MultiStageStackedController:
 
             for i in range(self.numStages - 1, -1, -1):
                 if i < (self.numStages - 1):
+                    # stages except for the last one will use next stage's target to bootstrap
                     self.agents[i].update_net_on_memory_given_target(targetAgent=self.agents[i + 1])
                 else:
+                    # the last stage will use its own target agent to bootstrap
                     self.agents[i].update_net_on_memory_given_target(targetAgent=None)
 
             self.learnStepCounter += 1
