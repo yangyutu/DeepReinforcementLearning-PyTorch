@@ -83,10 +83,7 @@ class CooperativeSimpleMazeTwoD(gym.Env):
 
 
     def step(self, action):
-        if self.stageID == 0:
-            self.stepCount += 1
-        else:
-            self.stepCount += 1
+        self.stepCount += 1
 
         i = self.currentState[0]
         j = self.currentState[1]
@@ -199,14 +196,91 @@ class CooperativeSimpleMazeTwoDContinuous(CooperativeSimpleMazeTwoD):
 
 
     def step(self, action):
-        if self.stageID == 0:
-            self.stepCount += 1
-        else:
-            self.stepCount += 1
+        self.stepCount += 1
 
         newPosition = self.currentState + action
         if not self.is_on_obstacle(newPosition[0], newPosition[1]):
             self.currentState = newPosition
+
+        if self.currentState[1] >= (self.stageID + 1 ) * self.mapWidth:
+            # pass job to agent 1
+            print('job passage', self.currentState)
+            self.done['stage'][self.stageID] = True
+            self.stageID += 1
+
+
+        reward, done = self.calReward()
+        state = {'stageID': self.stageID,
+                 'state': np.array([self.currentState[0] / self.lengthScale, \
+                                    self.currentState[1] / self.lengthScale])
+                 }
+
+
+        if self.multiStage:
+            return state, reward, done, {'currentState': self.currentState.copy()}
+        else:
+            return state, reward, done['global'], {'currentState': self.currentState.copy()}
+
+
+
+class CooperativeSimpleMazeTwoDMixed(CooperativeSimpleMazeTwoD):
+
+    def __init__(self, config):
+        super(CooperativeSimpleMazeTwoDMixed, self).__init__(config)
+        self.nbActions = [2, 4]
+
+    def calReward(self):
+
+        reward = 0.0
+
+        # if pass the time limit and not finish give zero reward
+        if self.stepCount > self.endStep:
+            self.done['stage'] = [True for _ in range(self.numStages)]
+            self.done['global'] = True
+            print('not finish ', self.currentState, self.stageID)
+            return reward, copy.deepcopy(self.done)
+
+
+
+
+        if self.stepCount <= self.endStep and self.stageID == (self.numStages - 1) and self.isTermnate():
+            self.done['stage'][self.stageID] = True
+            self.done['global'] = True
+            reward = 1.0
+            print('finish ', self.currentState, reward, self.stageID)
+
+
+        return reward, copy.deepcopy(self.done)
+
+    def isTermnate(self):
+        dist = self.currentState - self.targetState
+        if np.linalg.norm(dist, ord=np.inf) < 0.5:
+            return True
+        else:
+            return False
+
+
+    def step(self, action):
+
+        self.stepCount += 1
+
+        # stage 0 is continuous
+
+        if self.stageID == 0:
+            newPosition = self.currentState + action
+            if not self.is_on_obstacle(newPosition[0], newPosition[1]):
+                self.currentState = newPosition
+        if self.stageID == 1:
+            i = self.currentState[0]
+            j = self.currentState[1]
+            if action == 0 and not self.is_on_obstacle(i - 1, j):
+                self.currentState[0] -= 1
+            if action == 1 and not self.is_on_obstacle(i + 1, j):
+                self.currentState[0] += 1
+            if action == 2 and not self.is_on_obstacle(i, j - 1):
+                self.currentState[1] -= 1
+            if action == 3 and not self.is_on_obstacle(i, j + 1):
+                self.currentState[1] += 1
 
         if self.currentState[1] >= (self.stageID + 1 ) * self.mapWidth:
             # pass job to agent 1

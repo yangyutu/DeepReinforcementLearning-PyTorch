@@ -125,7 +125,9 @@ class DDPGAgent:
 
         self.runningAvgEpisodeReward = 0.0
 
-    def select_action(self, net, state, noiseFlag = False):
+    def select_action(self, net=None, state=None, noiseFlag = False):
+        if net is None:
+            net = self.actorNet
 
         with torch.no_grad():
             # self.policyNet(torch.from_numpy(state.astype(np.float32)).unsqueeze(0))
@@ -260,7 +262,7 @@ class DDPGAgent:
                 self.losses.append([self.globalStepCount, self.epIdx, critic_loss.item(), policy_loss.item()])
 
 
-    def work_before_step(self, state):
+    def work_before_step(self, state=None):
         pass
 
 

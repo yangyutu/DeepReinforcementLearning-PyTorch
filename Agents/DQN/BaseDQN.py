@@ -122,7 +122,9 @@ class BaseDQNAgent(object):
 
         randNum = random.random()
         # get a random number so that we can do epsilon exploration
-        if noiseFlag and randNum > epsThreshold:
+        if noiseFlag and randNum < epsThreshold:
+            action = random.randint(0, self.numAction - 1)
+        else:
             with torch.no_grad():
                 # self.policyNet(torch.from_numpy(state.astype(np.float32)).unsqueeze(0))
                 # here state[np.newaxis,:] is to add a batch dimension
@@ -133,8 +135,7 @@ class BaseDQNAgent(object):
                     stateTorch = torch.from_numpy(np.array(state[np.newaxis, :], dtype = np.float32))
                     QValues = net(stateTorch.to(self.device))
                 action = torch.argmax(QValues).item()
-        else:
-            action = random.randint(0, self.numAction-1)
+
         return action
 
     def getPolicy(self, state):
