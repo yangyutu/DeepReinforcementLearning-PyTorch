@@ -63,7 +63,7 @@ class Actor(nn.Module):
         self.linear3 = nn.Linear(hidden_size, output_size)
 
         self.apply(xavier_init)
-        self.noise = OUNoise(output_size, seed = 1, mu=0.0, theta=0.15, max_sigma=0.5, min_sigma=0.1, decay_period=100000)
+        self.noise = OUNoise(output_size, seed = 1, mu=0.0, theta=0.1, max_sigma=0.5, min_sigma=0.1, decay_period=100000)
         self.noise.reset()
 
         self.config = config
@@ -88,7 +88,7 @@ class Actor(nn.Module):
 # first construct the neutral network
 config = dict()
 
-config['trainStep'] = 1500
+config['trainStep'] = 3000
 config['epsThreshold'] = 0.5
 config['epsilon_start'] = 0.5
 config['epsilon_final'] = 0.05

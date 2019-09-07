@@ -161,6 +161,9 @@ class MultiStageStackedController:
                 self.save_checkpoint()
 
             self.epIdx += 1
+            for i in range(self.numStages):
+                self.agents[i].epIdx = self.epIdx
+
         self.save_all()
 
     def update_net(self, state, action, nextState, reward, doneDict, info):
@@ -192,11 +195,11 @@ class MultiStageStackedController:
 
     def save_all(self):
         for i in range(self.numStages - 1, -1, -1):
-            self.agents[i].save_all()
+            self.agents[i].save_all('stage' + str(i))
 
     def save_checkpoint(self):
         for i in range(self.numStages - 1, -1, -1):
-            self.agents[i].save_checkpoint()
+            self.agents[i].save_checkpoint('stage' + str(i))
     def load_checkpoint(self, prefix):
         for i in range(self.numStages - 1, -1, -1):
             self.agents[i].load_checkpoint(prefix)

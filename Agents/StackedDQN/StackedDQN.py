@@ -329,6 +329,6 @@ class StackedDQNAgent(DQNAgent):
         self.epIdx = checkpoint['epoch']
         self.globalStepCount = checkpoint['globalStep']
         for i in range(len(self.policyNets)):
-            self.policyNet.load_state_dict(checkpoint['model_state_dict'][i])
-            self.targetNet.load_state_dict(checkpoint['model_state_dict'][i])
-            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'][i])
+            self.policyNets[i].load_state_dict(checkpoint['model_state_dict'][i])
+            self.targetNets[i].load_state_dict(checkpoint['model_state_dict'][i])
+            self.optimizers[i].load_state_dict(checkpoint['optimizer_state_dict'][i])

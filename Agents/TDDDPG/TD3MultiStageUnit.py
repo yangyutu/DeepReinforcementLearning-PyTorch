@@ -36,7 +36,7 @@ class TD3MultiStageUnit(TDDDPGAgent):
         # for some env, the output state requires further processing before feeding to neural network
         if self.stateProcessor is not None:
             state, _ = self.stateProcessor(transitions.state, self.device)
-            nonFinalNextState, nonFinalMask, finalNextState, finalMask = self.stateProcessor(transitions.next_state, self.device)
+            nonFinalNextState, nonFinalMask, finalNextState, finalMask = self.stateProcessor(transitions.next_state, self.device, transitions.done)
         else:
             state = torch.tensor(transitions.state, device=self.device, dtype=torch.float32)
             nextState = torch.tensor(transitions.next_state, device=self.device, dtype=torch.float32)
@@ -46,11 +46,11 @@ class TD3MultiStageUnit(TDDDPGAgent):
             finalNextState = [nextState[i] for i in range(self.trainBatchSize) if finalMask[i]]
             nonFinalNextState = [nextState[i] for i in range(self.trainBatchSize) if nonFinalMask[i]]
 
-        if len(nonFinalNextState):
-            nonFinalNextState = torch.stack(nonFinalNextState)
+            if len(nonFinalNextState):
+                nonFinalNextState = torch.stack(nonFinalNextState)
 
-        if len(finalNextState):
-            finalNextState = torch.stack(finalNextState)
+            if len(finalNextState):
+                finalNextState = torch.stack(finalNextState)
 
         return state, nonFinalMask, nonFinalNextState, finalMask, finalNextState, action, reward
 
@@ -69,21 +69,26 @@ class TD3MultiStageUnit(TDDDPGAgent):
         QValuesOne = self.criticNetOne.forward(state, action).squeeze()
         QValuesTwo = self.criticNetTwo.forward(state, action).squeeze()
 
-        actionNoise = torch.randn((nonFinalNextState.shape[0], self.numAction), dtype=torch.float32, device=self.device)
-        next_actions = self.actorNet_target.forward(nonFinalNextState) + actionNoise * self.policySmoothNoise
 
         # next_actions = self.actorNet_target.forward(nonFinalNextState)
 
         QNext = torch.zeros(self.trainBatchSize, device=self.device, dtype=torch.float32)
+        numNonFinalNextState = sum(nonFinalMask)
+        numFinalNextState = sum(finalMask)
 
-        if len(nonFinalNextState):
+        if numNonFinalNextState:
+
+            actionNoise = torch.randn((numNonFinalNextState, self.numAction), dtype=torch.float32,
+                                      device=self.device)
+            next_actions = self.actorNet_target.forward(nonFinalNextState) + actionNoise * self.policySmoothNoise
+
             # if we do not have stage done
             # we use our own target net to bootstrap
             QNextCriticOne = self.criticNet_targetOne.forward(nonFinalNextState, next_actions.detach()).squeeze()
             QNextCriticTwo = self.criticNet_targetTwo.forward(nonFinalNextState, next_actions.detach()).squeeze()
             QNext[nonFinalMask] = torch.min(QNextCriticOne, QNextCriticTwo)
 
-        if len(finalNextState):
+        if numFinalNextState:
             if targetAgent is not None:
                 QNext[finalMask] = targetAgent.evaluate_state_value(finalNextState)
 

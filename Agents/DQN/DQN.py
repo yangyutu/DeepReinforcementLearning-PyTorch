@@ -295,8 +295,10 @@ class DQNAgent(BaseDQNAgent):
             return loss.item()
 
 
-    def save_all(self):
-        prefix = self.dirName + self.identifier + 'Finalepoch' + str(self.epIdx)
+    def save_all(self, identifier=None):
+        if identifier is None:
+            identifier = self.identifier
+        prefix = self.dirName + identifier + 'Finalepoch' + str(self.epIdx)
         torch.save({
             'epoch': self.epIdx,
             'globalStep': self.globalStepCount,
@@ -308,8 +310,10 @@ class DQNAgent(BaseDQNAgent):
         self.saveLosses(prefix + '_loss.txt')
         self.saveRewards(prefix + '_reward.txt')
 
-    def save_checkpoint(self):
-        prefix = self.dirName + self.identifier + 'Epoch' + str(self.epIdx)
+    def save_checkpoint(self, identifier=None):
+        if identifier is None:
+            identifier = self.identifier
+        prefix = self.dirName + identifier + 'Epoch' + str(self.epIdx)
         self.saveLosses(prefix + '_loss.txt')
         self.saveRewards(prefix + '_reward.txt')
         with open(prefix + '_memory.pickle', 'wb') as file:
