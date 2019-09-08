@@ -195,11 +195,13 @@ class MultiStageStackedController:
 
     def save_all(self):
         for i in range(self.numStages - 1, -1, -1):
-            self.agents[i].save_all('stage' + str(i))
+            self.agents[i].save_all('Stage' + str(i))
 
     def save_checkpoint(self):
         for i in range(self.numStages - 1, -1, -1):
-            self.agents[i].save_checkpoint('stage' + str(i))
+            self.agents[i].save_checkpoint('Stage' + str(i))
     def load_checkpoint(self, prefix):
         for i in range(self.numStages - 1, -1, -1):
-            self.agents[i].load_checkpoint(prefix)
+            self.agents[i].load_checkpoint('Stage' + str(i) + prefix)
+
+        self.globalStepCount = self.agents[0].globalStepCount
