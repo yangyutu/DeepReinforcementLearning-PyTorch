@@ -38,7 +38,7 @@ class TDDDPGAgent(DDPGAgent):
             self.policyUpdateFreq = self.config['policyUpdateFreq']
         self.policySmoothNoise = 0.01
         if 'policySmoothNoise' in self.config:
-            self.policyUpdateFreq = self.config['policySmoothNoise']
+            self.policySmoothNoise = self.config['policySmoothNoise']
 
     def net_to_device(self):
         # move model to correct device

@@ -25,6 +25,18 @@ class TD3MultiStageUnit(TDDDPGAgent):
         # if it is one step
         transition = ExtendedTransition(state, action, nextState, reward, done)
         self.memory.push(transition)
+        if self.hindSightER:
+            self.process_hindSightExperience(state, action, nextState, reward, done, info)
+
+
+    def process_hindSightExperience(self, state, action, nextState, reward, done, info):
+        if not done and self.globalStepCount % self.hindSightERFreq == 0:
+            stateNew, actionNew, nextStateNew, rewardNew, doneNew = self.env.getHindSightExperience(state, action, nextState, done, info)
+            if stateNew is not None:
+                transition = ExtendedTransition(stateNew, actionNew, nextStateNew, rewardNew, doneNew)
+                self.memory.push(transition)
+
+
 
     def prepare_minibatch(self, transitions_raw):
         # first store memory
