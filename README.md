@@ -40,3 +40,8 @@ PyTorch implementation of classical deep reinforcement learning algorithms
 * maze with dynamic obstacles and stchastic/deterministic agent
 * finanical portfolio engineering env (for hedging and investment)
 * colloidal assembly env
+
+
+## Third party envs
+* [[pybullet]](https://pybullet.org/wordpress/)
+
