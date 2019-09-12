@@ -64,7 +64,7 @@ class TwoStageSPVisualMaze:
 
         self.endStep = 500
         if 'episodeLength' in self.config:
-            self.episodeEndStep = self.config['episodeLength']
+            self.endStep = self.config['episodeLength']
 
         self.startThresh = 1
         self.endThresh = 1
