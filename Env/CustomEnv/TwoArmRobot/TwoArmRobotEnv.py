@@ -131,6 +131,23 @@ class TwoArmEnvironmentContinuous():
 
         return observation
 
+    def getHindSightExperience(self, state, action, nextState, info):
+        # if hit an obstacle or if action is to keep still
+        targetNew = info['effectorPosition']
+        firstArmEndPosition = state[0:2]
+        secondArmEndPosition = state[2:4]
+
+        secondArmDistToTarget = (targetNew - secondArmEndPosition)
+
+        observation = np.concatenate(
+            (firstArmEndPosition, secondArmEndPosition, secondArmDistToTarget/self.distanceScale))
+
+        rewardNew = 1
+        actionNew = action.copy()
+
+        return observation, actionNew, None, rewardNew
+
+
     def resetHelper(self):
         # set target information
 
@@ -160,6 +177,7 @@ class TwoArmEnvironmentContinuous():
             self.currentState = np.array([theta1, theta2])
 
         print('current state at start: ', self.currentState)
+        print('target, effector', self.targetState, x, y)
 
     def inverseKM(self, x, y):
 

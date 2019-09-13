@@ -230,6 +230,8 @@ class TwoStageSPVisualMaze:
         else:
             jm = np.array([0.0, 0.0, jmRaw[2]], dtype=np.float32)
             self.hindSightInfo['obsFlag'] = True
+
+
         # update current state using modified jump matrix
         self.currentState += jm
         # make sure orientation within 0 to 2pi
@@ -238,14 +240,19 @@ class TwoStageSPVisualMaze:
 
         distance = self.targetState - self.currentState[0:2]
 
+        if self.stageID == 1 and np.linalg.norm(distance, ord=2) > 1.2 * self.transitionDistance:
+            self.currentState[0:2] -= jm[0:2]
+            self.hindSightInfo['currentState'] = self.currentState.copy()
+
+
         if np.linalg.norm(distance, ord=2) < self.transitionDistance and self.stageID == 0:
             # pass job to agent 1
             #print('job passage', self.currentState)
             self.done['stage'][self.stageID] = True
             self.stageID = 1
-        if np.linalg.norm(distance, ord=2) > self.transitionDistance and self.stageID == 1:
-            self.stageID = 0
-            self.done['stage'][self.stageID] = False
+        # if np.linalg.norm(distance, ord=2) > self.transitionDistance and self.stageID == 1:
+        #     self.stageID = 0
+        #     self.done['stage'][self.stageID] = False
 
 
 
