@@ -2,9 +2,9 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import math
+import copy
 
-
-class TwoArmEnvironmentContinuous():
+class TwoArmEnvironmentContinuous:
 
     def __init__(self, config=None, seed=1):
 
@@ -214,3 +214,186 @@ class TwoArmEnvironmentContinuous():
 
     def render(self, mode='human'):
         pass
+
+
+
+class TwoArmEnvironmentContinuousTwoStage(TwoArmEnvironmentContinuous):
+
+    def __init__(self, config=None, seed=1):
+        super(TwoArmEnvironmentContinuousTwoStage, self).__init__(config, seed)
+        self.numStages = 2
+
+    def read_config(self):
+        super(TwoArmEnvironmentContinuousTwoStage, self).read_config()
+
+        self.transitionDistance = 0.5
+        if 'transitionDistance' in self.config:
+            self.transitionDistance = self.config['transitionDistance']
+
+        self.transitionEpisode = 4000
+        if 'transitionEpisode' in self.config:
+            self.transitionEpisode = self.config['transitionEpisode']
+
+        self.stageDistanceScales = [1.0, 1.0]
+        self.stageActionScales = [1.0, 1.0]
+        self.distanceScale = 1.0
+
+        if 'stageDistanceScales' in self.config:
+            self.stageDistanceScales = self.config['stageDistanceScales']
+
+        if 'stageActionScales' in self.config:
+            self.stageActionScales = self.config['stageActionScales']
+
+    def isTermnate(self):
+        dist = self.effectorPosition - self.targetState
+
+        if np.linalg.norm(dist, ord=2) < self.finishThresh:
+            return True
+
+        return False
+
+    def thresh_by_episode(self, step):
+
+        if step > self.transitionEpisode:
+            step = step - self.transitionEpisode
+        return self.endThresh + (
+            self.startThresh - self.endThresh) * math.exp(-1. * step / self.distanceThreshDecay)
+
+
+    def calReward(self):
+
+        reward = 0.0
+
+        # if pass the time limit and not finish give zero reward
+        if self.stepCount > self.endStep:
+            self.done['stage'] = [True for _ in range(self.numStages)]
+            self.done['global'] = True
+            print('not finish ', self.currentState, self.stageID)
+            return reward, copy.deepcopy(self.done)
+
+
+
+
+        if self.stepCount <= self.endStep and self.stageID == (self.numStages - 1) and self.isTermnate():
+            self.done['stage'][self.stageID] = True
+            self.done['global'] = True
+            reward = 1.0
+            print('finish ', self.currentState, reward, self.stageID)
+
+
+        return reward, copy.deepcopy(self.done)
+
+    def step(self, action):
+        self.stepCount += 1
+        self.infoDict['stepCount'] = self.stepCount
+        self.currentState += action * self.stageActionScales[self.stageID]
+        self.currentState %= 2 * np.pi
+        observation = self.constructObservation()
+
+        # transitions of stages
+        dist = self.effectorPosition - self.targetState
+
+        if self.stageID == 0 and np.linalg.norm(dist, ord=2) < self.transitionDistance:
+            print('job passage', self.effectorPosition, 'step', self.stepCount)
+            self.done['stage'][self.stageID] = True
+            self.stageID += 1
+
+        # adjust the scale of distance
+        observation[4:6] /= self.stageDistanceScales[self.stageID]
+
+        reward, doneDict = self.calReward()
+
+
+        self.infoDict['currentState'] = self.currentState.copy()
+        self.infoDict['targetState'] = self.targetState.copy()
+        self.infoDict['effectorPosition'] = self.effectorPosition.copy()
+        self.infoDict['stageID'] = self.stageID
+
+        combineObs = {'stageID': self.stageID, 'state': observation}
+
+        return combineObs, reward, doneDict.copy(), self.infoDict.copy()
+
+    def reset(self):
+        # self.infoDict['reset'] = True
+        self.done = {'stage': [False for _ in range(self.numStages)], 'global': False}
+        if self.epiCount > self.transitionEpisode:
+            self.distanceThreshDecay = self.transitionEpisode
+
+        self.infoDict['stepCount'] = 0
+        self.epiCount += 1
+        self.stepCount = 0
+        self.currentState = (np.random.rand(2) - np.array([0.5, 0.5])) * 8
+        self.resetHelper()
+        self.infoDict['initial state'] = self.currentState.copy()
+
+        observation = self.constructObservation()
+
+        dist = self.effectorPosition - self.targetState
+        if np.linalg.norm(dist, ord=2) < self.transitionDistance:
+            self.stageID = 1
+        else:
+            self.stageID = 0
+        print('initial stage', self.stageID)
+
+        # adjust the scale of distance
+        observation[4:6] /= self.stageDistanceScales[self.stageID]
+
+        combineObs = {'stageID': self.stageID, 'state': observation}
+
+
+        return combineObs
+
+    def getHindSightExperience(self, state, action, nextState, done, info):
+        # if hit an obstacle or if action is to keep still
+
+        if self.stageID == 1 and not done:
+            targetNew = info['effectorPosition']
+            firstArmEndPosition = state[0:2]
+            secondArmEndPosition = state[2:4]
+
+            secondArmDistToTarget = (targetNew - secondArmEndPosition)
+
+            observation = np.concatenate(
+                (firstArmEndPosition, secondArmEndPosition, secondArmDistToTarget/self.stageDistanceScales[self.stageID]))
+
+            rewardNew = 1
+            actionNew = action.copy()
+
+            return observation, actionNew, nextState, rewardNew, True
+        elif self.stageID == 0 and not done:
+            targetNew = info['effectorPosition']
+            firstArmEndPosition = state[0:2]
+            secondArmEndPosition = state[2:4]
+
+            secondArmDistToTarget = (targetNew - secondArmEndPosition)
+
+            observation = np.concatenate(
+                (firstArmEndPosition, secondArmEndPosition, secondArmDistToTarget/self.stageDistanceScales[self.stageID]))
+
+
+            nextStateObservation = nextState.copy()
+            nextStateObservation[4:6] *= 0.0
+            rewardNew = 1
+            actionNew = action.copy()
+
+            return observation, actionNew, nextStateObservation, rewardNew, True
+
+        else:
+            return None, None, None, None, None
+
+
+    def constructObservation(self):
+        firstArmEndPosition = np.array([np.cos(self.currentState[0]), np.sin(self.currentState[0])]) * self.armLength[0]
+        secondArmEndPosition = firstArmEndPosition + \
+                               np.array([np.cos(np.sum(self.currentState)), np.sin(np.sum(self.currentState))]) * \
+                               self.armLength[1]
+
+        firstArmDistToTarget = self.targetState - firstArmEndPosition
+        secondArmDistToTarget = (self.targetState - secondArmEndPosition)
+
+        self.effectorPosition = secondArmEndPosition.copy()
+
+
+        observation = np.concatenate(
+            (firstArmEndPosition, secondArmEndPosition, secondArmDistToTarget))
+        return observation

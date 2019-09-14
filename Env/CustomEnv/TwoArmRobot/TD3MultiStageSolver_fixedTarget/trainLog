@@ -1,0 +1,82 @@
+running average episode reward sum: 0.9619961334980588
+{'reset': False, 'endBeforeDone': False, 'stepCount': 6, 'initial state': array([-0.42973392,  1.76773732]), 'currentState': array([6.27951661, 1.56590555]), 'targetState': [1.0, 1.0], 'effectorPosition': array([1.00855264, 0.99629468]), 'stageID': 1}
+episode index:31994
+target Thresh 1.902344131556502
+current state at start:  [ 2.28963612 -2.80823595]
+target, effector [1.0, 1.0] 0.21000206507829755 0.2569056878263235
+initial stage 0
+at step 0:
+{'reset': False, 'endBeforeDone': False, 'stepCount': 1, 'initial state': array([ 2.28963612, -2.80823595]), 'currentState': array([2.03963612, 3.71924358]), 'targetState': [1.0, 1.0], 'effectorPosition': array([0.41382019, 0.39148112]), 'stageID': 0}
+job passage [1.0250543  0.97145294] step 6
+finish  [1.56727675 4.70742448] 1.0 1
+done in step count: 6
+reward sum = 0.941480149401
+running average episode reward sum: 0.9619954922733644
+{'reset': False, 'endBeforeDone': False, 'stepCount': 7, 'initial state': array([ 2.28963612, -2.80823595]), 'currentState': array([1.56727675, 4.70742448]), 'targetState': [1.0, 1.0], 'effectorPosition': array([1.00348358, 0.99150983]), 'stageID': 1}
+episode index:31995
+target Thresh 1.9023563377771526
+current state at start:  [0.13382679 1.98868202]
+target, effector [1.0, 1.0] 0.46691215712632195 0.985055862598236
+initial stage 0
+at step 0:
+{'reset': False, 'endBeforeDone': False, 'stepCount': 1, 'initial state': array([0.13382679, 1.98868202]), 'currentState': array([0.15342979, 1.73868202]), 'targetState': [1.0, 1.0], 'effectorPosition': array([0.67243773, 1.10164932]), 'stageID': 0}
+job passage [0.982729   1.00569423] step 2
+finish  [0.00424852 1.56050458] 1.0 1
+done in step count: 3
+reward sum = 0.970299
+running average episode reward sum: 0.9619957517904206
+{'reset': False, 'endBeforeDone': False, 'stepCount': 4, 'initial state': array([0.13382679, 1.98868202]), 'currentState': array([0.00424852, 1.56050458]), 'targetState': [1.0, 1.0], 'effectorPosition': array([1.00603416, 1.00423024]), 'stageID': 1}
+episode index:31996
+target Thresh 1.902368542472121
+current state at start:  [ 2.39343463 -2.19768165]
+target, effector [1.0, 1.0] 0.24795830457100476 0.8747950356626557
+initial stage 0
+at step 0:
+{'reset': False, 'endBeforeDone': False, 'stepCount': 1, 'initial state': array([ 2.39343463, -2.19768165]), 'currentState': array([2.14846857, 4.33078319]), 'targetState': [1.0, 1.0], 'effectorPosition': array([0.4347651 , 1.03254871]), 'stageID': 0}
+job passage [1.01079403 0.98103242] step 6
+finish  [1.57027697 4.70876589] 1.0 1
+done in step count: 6
+reward sum = 0.941480149401
+running average episode reward sum: 0.961995110617736
+{'reset': False, 'endBeforeDone': False, 'stepCount': 7, 'initial state': array([ 2.39343463, -2.19768165]), 'currentState': array([1.57027697, 4.70876589]), 'targetState': [1.0, 1.0], 'effectorPosition': array([1.00051078, 0.99585743]), 'stageID': 1}
+episode index:31997
+target Thresh 1.9023807456415982
+current state at start:  [ 2.07680401 -1.83966203]
+target, effector [1.0, 1.0] 0.4873242718177604 1.1096120619069856
+initial stage 0
+at step 0:
+{'reset': False, 'endBeforeDone': False, 'stepCount': 1, 'initial state': array([ 2.07680401, -1.83966203]), 'currentState': array([1.82680401, 4.21295138]), 'targetState': [1.0, 1.0], 'effectorPosition': array([0.71729658, 0.72637579]), 'stageID': 0}
+job passage [0.99181008 1.00774334] step 4
+finish  [1.56927119 4.71239186] 1.0 1
+done in step count: 4
+reward sum = 0.96059601
+running average episode reward sum: 0.961995066893109
+{'reset': False, 'endBeforeDone': False, 'stepCount': 5, 'initial state': array([ 2.07680401, -1.83966203]), 'currentState': array([1.56927119, 4.71239186]), 'targetState': [1.0, 1.0], 'effectorPosition': array([1.00152398, 0.99847658]), 'stageID': 1}
+episode index:31998
+target Thresh 1.9023929472857743
+current state at start:  [ 2.32872825 -2.5303203 ]
+target, effector [1.0, 1.0] 0.29232808817828293 0.5260298086654085
+initial stage 0
+at step 0:
+{'reset': False, 'endBeforeDone': False, 'stepCount': 1, 'initial state': array([ 2.32872825, -2.5303203 ]), 'currentState': array([2.07955684, 4.00286501]), 'targetState': [1.0, 1.0], 'effectorPosition': array([0.4928195 , 0.67393141]), 'stageID': 0}
+job passage [0.95985028 1.05460364] step 5
+finish  [1.57217934 4.71068483] 1.0 1
+done in step count: 5
+reward sum = 0.9509900498999999
+running average episode reward sum: 0.9619947229755805
+{'reset': False, 'endBeforeDone': False, 'stepCount': 6, 'initial state': array([ 2.32872825, -2.5303203 ]), 'currentState': array([1.57217934, 4.71068483]), 'targetState': [1.0, 1.0], 'effectorPosition': array([0.99861693, 0.99967791]), 'stageID': 1}
+episode index:31999
+target Thresh 1.9024051474048402
+current state at start:  [-0.00645184  2.10492814]
+target, effector [1.0, 1.0] 0.4964489377432998 0.85752580054958
+initial stage 0
+at step 0:
+{'reset': False, 'endBeforeDone': False, 'stepCount': 1, 'initial state': array([-0.00645184,  2.10492814]), 'currentState': array([0.06199652, 1.86599121]), 'targetState': [1.0, 1.0], 'effectorPosition': array([0.64843454, 0.99883934]), 'stageID': 0}
+job passage [0.98990313 1.02410562] step 3
+finish  [0.00438279 1.56990921] 1.0 1
+done in step count: 3
+reward sum = 0.970299
+running average episode reward sum: 0.9619949824842375
+{'reset': False, 'endBeforeDone': False, 'stepCount': 4, 'initial state': array([-0.00645184,  2.10492814]), 'currentState': array([0.00438279, 1.56990921]), 'targetState': [1.0, 1.0], 'effectorPosition': array([0.99649473, 1.00437666]), 'stageID': 1}
+
+Process finished with exit code 0
