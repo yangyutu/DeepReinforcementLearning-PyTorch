@@ -344,8 +344,8 @@ class DDPGAgent:
     def loadRewards(self, fileName):
         self.rewards = np.genfromtxt(fileName).tolist()
 
-    def save_all(self):
-        prefix = self.dirName + self.identifier + 'Finalepoch' + str(self.epIdx)
+    def save_all(self, identifier=None):
+        prefix = self.dirName + identifier + 'Finalepoch' + str(self.epIdx)
         self.saveLosses(prefix + '_loss.txt')
         self.saveRewards(prefix + '_reward.txt')
         with open(prefix + '_memory.pickle', 'wb') as file:
@@ -360,8 +360,8 @@ class DDPGAgent:
             'critic_optimizer_state_dict': self.critic_optimizer.state_dict()
         }, prefix + '_checkpoint.pt')
 
-    def save_checkpoint(self):
-        prefix = self.dirName + self.identifier + 'Epoch' + str(self.epIdx)
+    def save_checkpoint(self, identifier=None):
+        prefix = self.dirName + identifier + 'Epoch' + str(self.epIdx)
         self.saveLosses(prefix + '_loss.txt')
         self.saveRewards(prefix + '_reward.txt')
         with open(prefix + '_memory.pickle', 'wb') as file:
