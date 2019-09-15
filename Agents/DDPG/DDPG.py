@@ -345,6 +345,8 @@ class DDPGAgent:
         self.rewards = np.genfromtxt(fileName).tolist()
 
     def save_all(self, identifier=None):
+        if identifier is None:
+            identifier = self.identifier
         prefix = self.dirName + identifier + 'Finalepoch' + str(self.epIdx)
         self.saveLosses(prefix + '_loss.txt')
         self.saveRewards(prefix + '_reward.txt')
@@ -361,6 +363,9 @@ class DDPGAgent:
         }, prefix + '_checkpoint.pt')
 
     def save_checkpoint(self, identifier=None):
+        if identifier is None:
+            identifier = self.identifier
+
         prefix = self.dirName + identifier + 'Epoch' + str(self.epIdx)
         self.saveLosses(prefix + '_loss.txt')
         self.saveRewards(prefix + '_reward.txt')
