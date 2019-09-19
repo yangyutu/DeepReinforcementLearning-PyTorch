@@ -50,7 +50,6 @@ class TwoStageSPVisualMaze:
         self.constructSensorArrayIndex()
         self.epiCount = -1
 
-        self.transitionDistance = 10
 
     def read_config(self):
 
@@ -98,7 +97,9 @@ class TwoStageSPVisualMaze:
         if 'obstaclePenalty' in self.config:
             self.obstaclePenalty = self.config['obstaclePenalty']
 
-        self.stageRatio = 0.5
+        self.transitionDistance = 3.0
+        if 'transitionDistance' in self.config:
+            self.transitionDistance = self.config['transitionDistance']
 
 
     def thresh_by_episode(self, step):
@@ -116,7 +117,7 @@ class TwoStageSPVisualMaze:
         # if hit an obstacle or if action is to keep still
         if self.hindSightInfo['obsFlag'] or self.stageID == 0:
             return None, None, None, None, None
-        else:
+        elif self.stageID == 1 and not done:
             targetNew = self.hindSightInfo['currentState'][0:2]
 
             distance = targetNew - self.hindSightInfo['previousState'][0:2]
@@ -139,6 +140,7 @@ class TwoStageSPVisualMaze:
             actionNew = action
             # here [0, 0] is dummy input to ensure done is always true
             return state, actionNew, nextState, 1.0, True
+
 
     def getSensorInfo(self):
         # sensor information needs to consider orientation information
@@ -238,22 +240,13 @@ class TwoStageSPVisualMaze:
         self.currentState[2] = (self.currentState[2] + 2 * np.pi) % (2 * np.pi)
         self.hindSightInfo['currentState'] = self.currentState.copy()
 
+        # transitions of stages
         distance = self.targetState - self.currentState[0:2]
 
-        if self.stageID == 1 and np.linalg.norm(distance, ord=2) > 1.2 * self.transitionDistance:
-            self.currentState[0:2] -= jm[0:2]
-            self.hindSightInfo['currentState'] = self.currentState.copy()
-
-
-        if np.linalg.norm(distance, ord=2) < self.transitionDistance and self.stageID == 0:
-            # pass job to agent 1
-            #print('job passage', self.currentState)
+        if self.stageID == 0 and np.linalg.norm(distance, ord=2) < self.transitionDistance:
+            print('job passage', self.currentState, 'step', self.stepCount)
             self.done['stage'][self.stageID] = True
-            self.stageID = 1
-        # if np.linalg.norm(distance, ord=2) > self.transitionDistance and self.stageID == 1:
-        #     self.stageID = 0
-        #     self.done['stage'][self.stageID] = False
-
+            self.stageID += 1
 
 
 

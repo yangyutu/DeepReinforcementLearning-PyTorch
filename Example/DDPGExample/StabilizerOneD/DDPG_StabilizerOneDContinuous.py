@@ -59,6 +59,8 @@ class Actor(nn.Module):
         if noiseFlag:
             action = self.forward(state)
             action += torch.tensor(self.noise.get_noise(), dtype=torch.float32).unsqueeze(0)
+            action = torch.clamp(action, -1, 1)
+            return action
         return self.forward(state)
 
 

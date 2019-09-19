@@ -74,7 +74,10 @@ class BaseDQNAgent(object):
         if 'episodeLength' in self.config:
             self.episodeLength = self.config['episodeLength']
 
-        self.epsThreshold = self.config['epsThreshold']
+
+        self.epsThreshold = 0.1
+        if 'epsThreshold' in self.config:
+            self.epsThreshold = self.config['epsThreshold']
 
         self.epsilon_start = self.epsThreshold
         self.epsilon_final = self.epsThreshold
