@@ -93,6 +93,8 @@ public:
 	void step(int nstep, py::array_t<double>& actions);
 	void setInitialState(double x, double y, double z, double ori0, double ori1, double ori2);
 	py::array_t<double> get_positions();
+	py::array_t<double> get_particle_local_frame();
+
 	std::vector<double> get_positions_cpp();
 	json config;
 	std::vector<double> steeringAction(std::vector<double> target);

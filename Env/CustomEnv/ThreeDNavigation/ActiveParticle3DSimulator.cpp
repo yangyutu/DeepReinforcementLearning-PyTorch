@@ -176,6 +176,24 @@ void ActiveParticle3DSimulator::run(int steps, const std::vector<double>& action
 	particle->updateAngles();
 }
 
+py::array_t<double> ActiveParticle3DSimulator::get_particle_local_frame() {
+	std::vector<double> positions(9);
+	positions[0] = particle->orientVec[0];
+	positions[1] = particle->orientVec[1];
+	positions[2] = particle->orientVec[2];
+	positions[3] = particle->oriMoveDirection[0][0];
+	positions[4] = particle->oriMoveDirection[0][1];
+	positions[5] = particle->oriMoveDirection[0][2];
+	positions[6] = particle->oriMoveDirection[1][0];
+	positions[7] = particle->oriMoveDirection[1][1];
+	positions[8] = particle->oriMoveDirection[1][2];
+
+	py::array_t<double> result(9, positions.data());
+
+	return result;
+
+}
+
 
 void ActiveParticle3DSimulator::createInitialState(double x, double y, double z, double ori0, double ori1, double ori2) {
 
@@ -196,9 +214,6 @@ void ActiveParticle3DSimulator::createInitialState(double x, double y, double z,
 	}
 
 	this->timeCounter = 0;
-
-
-
 }
 
 void ActiveParticle3DSimulator::close() {

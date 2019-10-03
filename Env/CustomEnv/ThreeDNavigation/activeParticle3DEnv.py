@@ -6,7 +6,7 @@ import os
 from sklearn.metrics.pairwise import euclidean_distances
 import math
 import sys
-
+from scipy.spatial import distance
 
 class ActiveParticle3DEnv():
     def __init__(self, configName, randomSeed = 1):
@@ -107,82 +107,35 @@ class ActiveParticle3DEnv():
     def constructSensorArrayIndex(self):
         x_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
         y_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
-        [Y, X] = np.meshgrid(y_int, x_int)
-        self.senorIndex = np.stack((X.reshape(-1), Y.reshape(-1)), axis=1)
-
+        z_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
+        [Y, X, Z] = np.meshgrid(y_int, x_int, z_int)
+        self.sensorIndex = np.stack((X.reshape(-1), Y.reshape(-1), Z.reshape(-1)), axis=1)
+        self.sensorPos = self.sensorIndex * self.sensorPixelSize
     def getSensorInfo(self):
     # sensor information needs to consider orientation information
     # add integer resentation of location
     #    index = self.senorIndex + self.currentState + np.array([self.padding, self.padding])
-        phi = self.currentState[2]
-    #   phi = (self.stepCount)*math.pi/4.0
+        localFrame = self.model.getLocalFrame()
+
+        localFrame.shape = (3, 3)
     # this is rotation matrix transform from local coordinate system to lab coordinate system
-        rotMatrx = np.matrix([[math.cos(phi),  -math.sin(phi)],
-                              [math.sin(phi), math.cos(phi)]])
-        transIndex = np.matmul(self.senorIndex, rotMatrx.T).astype(np.int)
+        rotMatrx = localFrame
+        sensorGlobalPos = np.matmul(self.sensorPos, rotMatrx.T)
 
-        i = math.floor(self.currentState[0] + 0.5)
-        j = math.floor(self.currentState[1] + 0.5)
+        sensorGlobalPos[:, 0] += self.currentState[0]
+        sensorGlobalPos[:, 1] += self.currentState[1]
+        sensorGlobalPos[:, 2] += self.currentState[2]
 
-        transIndex[:, 0] += self.padding + i
-        transIndex[:, 1] += self.padding + j
+        pDist = distance.euclidean(self.currentState[0:3], self.obstacleCenters)
 
-        # use augumented obstacle matrix to check collision
-        self.sensorInfoMat = self.obsMap[transIndex[:, 0], transIndex[:, 1]].reshape(self.receptWidth, -1)
-
-    def getSensorInfoFromPos(self, position):
-        phi = position[2]
-
-        rotMatrx = np.matrix([[math.cos(phi),  -math.sin(phi)],
-                              [math.sin(phi), math.cos(phi)]])
-        transIndex = np.matmul(self.senorIndex, rotMatrx.T).astype(np.int)
-
-        i = math.floor(position[0] + 0.5)
-        j = math.floor(position[1] + 0.5)
-
-        transIndex[:, 0] += self.padding + i
-        transIndex[:, 1] += self.padding + j
+        overlapVec = np.zeros(len(self.sensorIndex), dtype=np.uint8)
+        for idx, dist in enumerate(pDist[0]):
+            if dist < self.targetClipLength:
+                for i in range(len(self.sensorIndex)):
+                    overlapVec[i] = self.obstacles[idx].isInside(sensorGlobalPos[i])
 
         # use augumented obstacle matrix to check collision
-        sensorInfoMat = self.obsMap[transIndex[:, 0], transIndex[:, 1]].reshape(self.receptWidth, -1)
-
-        # use augumented obstacle matrix to check collision
-        return np.expand_dims(sensorInfoMat, axis = 0)
-
-    def getExperienceAugmentation(self, state, action, nextState, reward, info):
-        raise NotImplementedError
-        if self.timingFlag:
-            raise Exception('timing for experience Augmentation case is not implemented!')
-
-        state_Aug, action_Aug, nextState_Aug, reward_Aug = [], [], [], []
-        if not self.obstacleFlag:
-            if self.particleType == 'FULLCONTROL':
-                # state is the position of target in the local frame
-                # here uses the mirror relation
-                state_Aug.append(np.array([state[0], -state[1]]))
-                action_Aug.append(np.array([action[0], -action[1]]))
-                if nextState is None:
-                    nextState_Aug.append(None)
-                else:
-                    nextState_Aug.append(np.array([nextState[0], -nextState[1]]))
-                reward_Aug.append(reward)
-            elif self.particleType == 'SLIDER':
-                state_Aug.append(np.array([state[0], -state[1]]))
-                action_Aug.append(np.array([-action[0]]))
-                if nextState is None:
-                    nextState_Aug.append(None)
-                else:
-                    nextState_Aug.append(np.array([nextState[0], -nextState[1]]))
-                reward_Aug.append(reward)
-            elif self.particleType == 'VANILLASP':
-                state_Aug.append(np.array([state[0], -state[1]]))
-                action_Aug.append(np.array([action[0]]))
-                if nextState is None:
-                    nextState_Aug.append(None)
-                else:
-                    nextState_Aug.append(np.array([nextState[0], -nextState[1]]))
-                reward_Aug.append(reward)
-        return state_Aug, action_Aug, nextState_Aug, reward_Aug
+        self.sensorInfoMat = np.reshape(overlapVec, (self.receptWidth, self.receptWidth, self.receptWidth))
 
     def getHindSightExperience(self, state, action, nextState, info):
 
@@ -206,17 +159,6 @@ class ActiveParticle3DEnv():
             actionNew = action
             return stateNew, actionNew, None, rewardNew
 
-    def constructSensorArrayIndex(self):
-        x_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
-        y_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
-        [Y, X] = np.meshgrid(y_int, x_int)
-        self.senorIndex = np.stack((X.reshape(-1), Y.reshape(-1)), axis=1)
-        # sensormap maps a location (x, y) to to an index. for example (-5, -5) to 0
-        # self.sensorMap = {}
-        # for i, x in enumerate(x_int):
-        #     for j, y in enumerate(y_int):
-        #         self.sensorMap[(x, y)] = i * self.receptWidth + j
-
 
     def actionPenaltyCal(self, action):
         raise NotImplementedError
@@ -224,27 +166,19 @@ class ActiveParticle3DEnv():
         return -self.actionPenalty * actionNorm ** 2
 
     def obstaclePenaltyCal(self):
-        raise NotImplementedError
 
-        if self.obstacleFlag and not self.dynamicObstacleFlag:
-            i = math.floor(self.currentState[0] + 0.5)
-            j = math.floor(self.currentState[1] + 0.5)
+        if self.obstacleFlag:
+            pDist = distance.euclidean(self.currentState[0:3], self.obstacleCenters)
 
-            xIdx = self.padding + i
-            yIdx = self.padding + j
+            for idx, dist in enumerate(pDist[0]):
+                if dist < self.targetClipLength:
+                    for i in range(len(self.sensorIndex)):
+                        inObstacle = self.obstacles[idx].isInside(self.currentState[0:3])
 
-            if self.obsMap[xIdx, yIdx] > 0:
+            if inObstacle:
                 return -self.obstaclePenalty, True
             else:
-                return 0, False
-        if self.obstacleFlag and self.dynamicObstacleFlag:
-            trapFlag = self.model.checkDynamicTrap()
-            if trapFlag:
-                self.info['dynamicTrap'] += 1
-                return -self.obstaclePenalty, True
-            else:
-
-                return 0, False
+                return 0.0, False
 
     def step(self, action):
         self.hindSightInfo['obstacle'] = False
@@ -269,24 +203,6 @@ class ActiveParticle3DEnv():
         if self.is_terminal(distance):
             reward = 1.0
             done = True
-
-
-        # penalty for actions
-#        reward += self.actionPenaltyCal(action)
-
-        # # update sensor information
-        # if self.obstacleFlag:
-        #     if not self.dynamicObstacleFlag:
-        #         self.getSensorInfo()
-        #     else:
-        #         self.getSequenceSensorInfo()
-        #     penalty, flag = self.obstaclePenaltyCal()
-        #     reward += penalty
-        #     if flag:
-        #         self.hindSightInfo['obstacle'] = True
-        #         self.currentState = self.hindSightInfo['previousState'].copy()
-        #         #if self.dynamicObstacleFlag:
-        #         #    done = True
 
 
         # distance will be changed from lab coordinate to local coordinate
