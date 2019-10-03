@@ -15,17 +15,28 @@ ActiveParticle3DSimulator::ActiveParticle3DSimulator(std::string configName0, in
 }
 
 void ActiveParticle3DSimulator::readConfigFile() {
+	//auto iniConfig = config["iniConfig"];
+	//double x = iniConfig[0];
+
+	particle = std::make_shared<ParticleState>(0, 0, 0);
 
 	randomMoveFlag = config["randomMoveFlag"];
 
 	filetag = config["filetag"];
 	//std::vector<double> iniConfig;
+	std::string typeString = config["particleType"];
 
+	if (typeString.compare("VANILLASP") == 0) {
+		particle->type = ParticleType::VANILLASP;
+	}
+	else if (typeString.compare("SLIDER") == 0) {
+		particle->type = ParticleType::SLIDER;
+	}
+	else {
+		std::cout << "particle type out of range" << std::endl;
+		exit(2);
+	}
 
-	//auto iniConfig = config["iniConfig"];
-	//double x = iniConfig[0];
-
-	particle = std::make_shared<ParticleState>(0, 0, 0);
 
 	diffusivity_r = 0.161; // characteristic time scale is about 6s
 	Tc = 1.0 / diffusivity_r;
@@ -34,6 +45,12 @@ void ActiveParticle3DSimulator::readConfigFile() {
 	maxRotationSpeed = config["maxRotationSpeed"];
 	radius = config["radius"];
 	maxSpeed = maxSpeed * radius / Tc;
+    gravity = 0.0;
+    if (config.contains("gravity")) {
+	    gravity = config["gravity"];
+	     gravity *= kb * T / radius;
+    }
+
 	dt_ = config["dt"]; // units of characteristc time
 	trajOutputInterval = 1.0 / dt_;
 	if (config.contains("trajOutputInterval")) {
@@ -90,15 +107,27 @@ std::vector<double> ActiveParticle3DSimulator::get_positions_cpp() {
 
 void ActiveParticle3DSimulator::run(int steps, const std::vector<double>& actions) {
 
-	particle->v = actions[0];
-	particle->w = actions[1];
+
+	if (particle->type == ParticleType::VANILLASP) {
+		particle->u = actions[0];
+		particle->v = 0.0;
+		particle->w = 0.0;
+	}
+
+	if (particle->type == ParticleType::SLIDER) {
+		particle->u = 1.0;
+		particle->v = actions[0];
+		particle->w = actions[1];
+	}
+
+
 	for (int stepCount = 0; stepCount < steps; stepCount++) {
 		if (((this->timeCounter) == 0) && trajOutputFlag) {
 			this->outputTrajectory(this->trajOs);
 		}
 
 
-/*
+		/*
 		oriMoveDirection[0][0] = -sin(particle->phi);
 		oriMoveDirection[0][1] = cos(particle->phi);
 		oriMoveDirection[0][2] = 0.0;
@@ -106,14 +135,16 @@ void ActiveParticle3DSimulator::run(int steps, const std::vector<double>& action
 		oriMoveDirection[1][0] = (particle->orientVec[1] * oriMoveDirection[0][2] - particle->orientVec[2] * oriMoveDirection[0][1]);
 		oriMoveDirection[1][1] = (particle->orientVec[2] * oriMoveDirection[0][0] - particle->orientVec[0] * oriMoveDirection[0][2]);
 		oriMoveDirection[1][2] = (particle->orientVec[0] * oriMoveDirection[0][1] - particle->orientVec[1] * oriMoveDirection[0][0]);
-*/
+		*/
+		particle->F[2] = gravity;
+
 		for (int i = 0; i < 3; i++) {
 			particle->r[i] += (mobility * particle->F[i] + particle->u * maxSpeed * particle->orientVec[i]) * dt_;
 		}
 
 		for (int i = 0; i < 3; i++) {
 			particle->orientVec[i] += (particle->oriMoveDirection[0][i] * maxRotationSpeed * particle->v
-									 + particle->oriMoveDirection[1][i] * maxRotationSpeed * particle->w) * dt_;
+				+ particle->oriMoveDirection[1][i] * maxRotationSpeed * particle->w) * dt_;
 		}
 
 		if (randomMoveFlag) {
@@ -128,7 +159,7 @@ void ActiveParticle3DSimulator::run(int steps, const std::vector<double>& action
 
 			}
 			for (int i = 0; i < 3; i++) {
-				particle->orientVec[i] += (particle->oriMoveDirection[0][i] * randomOriMove[0] + particle->oriMoveDirection[1][i] * randomOriMove[1]) * dt_;
+				particle->orientVec[i] += (particle->oriMoveDirection[0][i] * randomOriMove[0] + particle->oriMoveDirection[1][i] * randomOriMove[1]);
 			}
 
 		}
@@ -176,26 +207,46 @@ void ActiveParticle3DSimulator::close() {
 
 
 std::vector<double> ActiveParticle3DSimulator::steeringAction(std::vector<double> target) {
-	for (int i = 0; i < 3; i++)
-		target[i] -= particle->r[i] / radius;
-	double length = sqrt(target[0] * target[0] + target[1] * target[1] + target[2] * target[2]);
-	for (int i = 0; i < 3; i++)
-		target[i] /= length;
 
-	double straightDirector[3];
-	double dot = 0.0;
-	for (int i = 0; i < 3; i++)
-		dot += particle->orientVec[i] * target[i];
+	if (particle->type == ParticleType::SLIDER) {
+		for (int i = 0; i < 3; i++)
+			target[i] -= particle->r[i] / radius;
+		double length = sqrt(target[0] * target[0] + target[1] * target[1] + target[2] * target[2]);
+		for (int i = 0; i < 3; i++)
+			target[i] /= length;
 
-	for (int i = 0; i < 3; i++)
-		straightDirector[i] = (target[i] - dot * particle->orientVec[i]);
+		double straightDirector[3];
+		double dot = 0.0;
+		for (int i = 0; i < 3; i++)
+			dot += particle->orientVec[i] * target[i];
 
-	std::vector<double> action(2, 0.0);
-	for (int i = 0; i < 3; i++) {
-		action[0] += straightDirector[i] * particle->oriMoveDirection[0][i];
-		action[1] += straightDirector[i] * particle->oriMoveDirection[1][i];
+		for (int i = 0; i < 3; i++)
+			straightDirector[i] = (target[i] - dot * particle->orientVec[i]);
+
+		std::vector<double> action(2, 0.0);
+		for (int i = 0; i < 3; i++) {
+			action[0] += straightDirector[i] * particle->oriMoveDirection[0][i];
+			action[1] += straightDirector[i] * particle->oriMoveDirection[1][i];
+		}
+		return action;
 	}
-	return action;
+	if (particle->type == ParticleType::VANILLASP) {
+		for (int i = 0; i < 3; i++)
+			target[i] -= particle->r[i] / radius;
+		double length = sqrt(target[0] * target[0] + target[1] * target[1] + target[2] * target[2]);
+		for (int i = 0; i < 3; i++)
+			target[i] /= length;
+
+		double straightDirector[3];
+		double dot = 0.0;
+		for (int i = 0; i < 3; i++)
+			dot += particle->orientVec[i] * target[i];
+		std::vector<double> action(1, 0.0);
+		if (dot > 0.5) {
+			action[0] = 1.0;
+		}
+		return action;
+	}
 }
 
 void ActiveParticle3DSimulator::outputTrajectory(std::ostream& os) {
@@ -230,4 +281,3 @@ void ActiveParticle3DSimulator::step(int nstep, py::array_t<double>& actions) {
 
 	run(nstep, actions_cpp);
 }
-

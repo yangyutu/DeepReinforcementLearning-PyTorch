@@ -52,7 +52,16 @@ class ActiveParticle3DEnv():
         if 'episodeLength' in self.config:
             self.episodeEndStep = self.config['episodeLength']
 
-        self.nbActions = 2
+        self.particleType = self.config['particleType']
+        typeList = ['VANILLASP','SLIDER']
+        if self.particleType not in typeList:
+            sys.exit('particle type not right!')
+
+        if self.particleType == 'SLIDER':
+            self.nbActions = 2
+        elif self.particleType == 'VANILLASP':
+            self.nbActions = 1
+
 
         self.startThresh = 1
         self.endThresh = 1

@@ -14,12 +14,22 @@
 using json = nlohmann::json;
 namespace py = pybind11;
 
+enum class ParticleType {
+    FULLCONTROL,
+	VANILLASP,
+	CIRCLER,
+	SLIDER,
+	TWODIM
+};
+
+
 struct ParticleState {
-    double r[3], F[3];
+	double r[3], F[3];
 	double orientVec[3];
 	double oriMoveDirection[2][3];
 	double theta, phi;
 	double u, v, w;
+	ParticleType type;
 	ParticleState(double x = 0, double y = 0, double z = 0) {
 		r[0] = x; r[1] = y; r[2] = z;
 		orientVec[0] = 1.0;
@@ -95,6 +105,7 @@ private:
 	std::shared_ptr<ParticleState> particle;
 	double radius, radius_nm;
 	double Bpp; //2.29 is Bpp/a/kT
+	double gravity;
 	double Kappa; // here is kappa*radius
 	double dt_, cutoff, mobility, diffusivity_r, diffusivity_t, Tc;
 	std::default_random_engine rand_generator;

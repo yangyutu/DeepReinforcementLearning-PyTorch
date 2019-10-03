@@ -15,14 +15,15 @@ import random
 
 env = ActiveParticle3DEnv('config.json',1)
 
-step = 20
+step = 200
 
 state = env.reset()
+NA = env.nbActions
 print(state)
 
 for i in range(step):
     state = env.currentState
-    action = np.random.randn(2)
+    action = np.random.randn(NA)
     nextState, reward, action, info = env.step(action)
     print(nextState)
     print(info)
