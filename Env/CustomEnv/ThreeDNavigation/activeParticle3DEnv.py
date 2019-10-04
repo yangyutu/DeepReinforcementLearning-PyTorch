@@ -8,12 +8,50 @@ import math
 import sys
 from scipy.spatial import distance
 
+
+# notes for gravity
+# gravity will have unit of kT/a, then every second, the displacement is given by G D/kT
+# given G = 5kT/a, every second the displacement is 5 D/a and is 5 D/a^2 in radius
+
+# a dummy test env
+class ActiveParticle3DSimulatorPythonDummy:
+    def __init__(self, configName, randomSeed):
+        self.currentState = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
+
+    def getLocalFrame(self):
+        return np.array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
+
+    def createInitialState(self, x, y, z, ori0, ori1, ori2):
+        self.currentState = np.array([x, y, z, ori0, ori1, ori2])
+
+
+class ThreeDObstacle:
+
+    def __init__(self, center, radius, slope, centralHeight, orientVec):
+        self.center = center
+        self.centralHeight = centralHeight
+        self.radius = radius
+        self.slope = slope
+        self.orientVec = orientVec
+
+    def isInside(self, pointVec):
+        # first convert
+        distanceVec = pointVec - self.center
+        Heights = abs(np.dot(distanceVec, self.orientVec))
+        distance2Axis = np.linalg.norm((distanceVec - np.outer(Heights, self.orientVec)), axis = 1)
+
+        return np.logical_and(distance2Axis < self.radius,(Heights - self.centralHeight - distance2Axis * self.slope) < 0.0)
+
+
+
+
 class ActiveParticle3DEnv():
-    def __init__(self, configName, randomSeed = 1):
+    def __init__(self, configName, randomSeed = 1, obstacleConstructorCallBack = None):
 
         with open(configName) as f:
             self.config = json.load(f)
         self.randomSeed = randomSeed
+        self.obstacleConstructorCallBack = obstacleConstructorCallBack
         self.model = ActiveParticle3DSimulatorPython(configName, randomSeed)
         self.read_config()
         self.initilize()
@@ -41,9 +79,16 @@ class ActiveParticle3DEnv():
 
         self.receptHalfWidth = self.config['receptHalfWidth']
         self.padding = self.config['obstacleMapPaddingWidth']
+
+        self.sensorPixelSize = 4
+        if 'sensorPixelSize' in self.config:
+            self.sensorPixelSize = self.config['sensorPixelSize']
+
         self.receptWidth = 2 * self.receptHalfWidth + 1
-        self.targetClipLength = 2 * self.receptHalfWidth
+        self.targetClipLength = (2 * self.receptHalfWidth) * self.sensorPixelSize
         self.stateDim = (self.receptWidth, self.receptWidth)
+
+
 
         self.sensorArrayWidth = (2*self.receptHalfWidth + 1)
 
@@ -83,6 +128,12 @@ class ActiveParticle3DEnv():
         if 'obstacleFlag' in self.config:
             self.obstacleFlag = self.config['obstacleFlag']
 
+        if self.obstacleFlag:
+            self.constructObstacles()
+
+            self.wallRadius = self.config['wallRadius']
+            self.wallHeight = self.config['wallHeight']
+
         self.nStep = self.config['modelNStep']
 
         self.distanceScale = 20
@@ -104,6 +155,11 @@ class ActiveParticle3DEnv():
     def thresh_by_episode(self, step):
         return self.endThresh + (
                 self.startThresh - self.endThresh) * math.exp(-1. * step / self.distanceThreshDecay)
+
+    def constructObstacles(self):
+        self.obstacles, self.obstacleCenters = self.obstacleConstructorCallBack()
+
+
     def constructSensorArrayIndex(self):
         x_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
         y_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
@@ -116,7 +172,8 @@ class ActiveParticle3DEnv():
     # add integer resentation of location
     #    index = self.senorIndex + self.currentState + np.array([self.padding, self.padding])
         localFrame = self.model.getLocalFrame()
-
+    # in local Frame, each row is the vector of the local frame
+    # transform from local coordinate to global coordinate is then given by localFrame * localCood or localCood * localFrame
         localFrame.shape = (3, 3)
     # this is rotation matrix transform from local coordinate system to lab coordinate system
         rotMatrx = localFrame
@@ -126,15 +183,16 @@ class ActiveParticle3DEnv():
         sensorGlobalPos[:, 1] += self.currentState[1]
         sensorGlobalPos[:, 2] += self.currentState[2]
 
-        pDist = distance.euclidean(self.currentState[0:3], self.obstacleCenters)
+        pDist = euclidean_distances([self.currentState[0:3]], self.obstacleCenters)
 
         overlapVec = np.zeros(len(self.sensorIndex), dtype=np.uint8)
         for idx, dist in enumerate(pDist[0]):
             if dist < self.targetClipLength:
-                for i in range(len(self.sensorIndex)):
-                    overlapVec[i] = self.obstacles[idx].isInside(sensorGlobalPos[i])
+                overlapVec += self.obstacles[idx].isInside(sensorGlobalPos)
 
-        # use augumented obstacle matrix to check collision
+        overlapVec += self.outsideWall(sensorGlobalPos)
+
+    # use augumented obstacle matrix to check collision
         self.sensorInfoMat = np.reshape(overlapVec, (self.receptWidth, self.receptWidth, self.receptWidth))
 
     def getHindSightExperience(self, state, action, nextState, info):
@@ -148,9 +206,8 @@ class ActiveParticle3DEnv():
             distanceLength = np.linalg.norm(distance, ord=2)
             distance = distance / distanceLength * min(self.targetClipLength, distanceLength)
             if self.obstacleFlag:
-                sensorInfoMat = self.getSensorInfoFromPos(self.hindSightInfo['previousState'])
 
-                stateNew = {'sensor': sensorInfoMat,
+                stateNew = {'sensor': state['sensor'],
                          'target': np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale))}
             else:
                 stateNew = np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale))
@@ -165,20 +222,35 @@ class ActiveParticle3DEnv():
         actionNorm = np.linalg.norm(action, ord=2)
         return -self.actionPenalty * actionNorm ** 2
 
-    def obstaclePenaltyCal(self):
+    def outsideWall(self, points):
 
+        distance2Axis = np.linalg.norm(points - np.array([self.wallRadius, self.wallRadius, 0]), axis = 1)
+
+        return np.logical_or(distance2Axis > self.wallRadius, np.logical_or(points[:,2] < 0.0, points[:,2] > self.wallHeight))
+
+
+    def inObstacle(self, point):
         if self.obstacleFlag:
-            pDist = distance.euclidean(self.currentState[0:3], self.obstacleCenters)
+            pDist = euclidean_distances([point], self.obstacleCenters)
 
             for idx, dist in enumerate(pDist[0]):
                 if dist < self.targetClipLength:
-                    for i in range(len(self.sensorIndex)):
-                        inObstacle = self.obstacles[idx].isInside(self.currentState[0:3])
+                    inObstacle = self.obstacles[idx].isInside([point])
 
-            if inObstacle:
-                return -self.obstaclePenalty, True
-            else:
-                return 0.0, False
+                    if inObstacle[0]:
+                        return True
+
+            # check if outside the all
+            r = math.sqrt((point[0] - self.wallRadius)**2 + (point[1] - self.wallRadius)**2)
+            if r > self.wallRadius:
+                return True
+
+            if point[2] > self.wallHeight or point[2] < 0.0:
+                return True
+
+        return False
+
+
 
     def step(self, action):
         self.hindSightInfo['obstacle'] = False
@@ -189,6 +261,17 @@ class ActiveParticle3DEnv():
         self.model.step(self.nStep, action)
         self.currentState = self.model.getPositions()
         #self.currentState = self.currentState + 2.0 * np.array([action[0], action[1], 0])
+
+        hitObs = self.inObstacle(self.currentState[0:3])
+        if hitObs:
+            # if hit obstacle, we move angle but not the position,
+            #self.info['trapConfig'].append(self.currentState.copy())
+            self.currentState[0:3] = self.hindSightInfo['previousState'][0:3]
+            self.model.setInitialState(self.currentState[0], self.currentState[1], self.currentState[2],
+                                          self.currentState[3], self.currentState[4], self.currentState[5])
+
+            self.hindSightInfo['obstacle'] = True
+            self.info['trapCount'] += 1
 
         self.hindSightInfo['currentState'] = self.currentState.copy()
         self.info['currentState'] = self.currentState.copy()
@@ -208,6 +291,10 @@ class ActiveParticle3DEnv():
         # distance will be changed from lab coordinate to local coordinate
         distanceLength = np.linalg.norm(distance, ord=2)
         distance = distance / distanceLength * min( self.targetClipLength, distanceLength)
+
+        self.info['previousTarget'] = self.info['currentTarget'].copy()
+        self.info['currentTarget'] = distance.copy()
+
         if self.obstacleFlag:
             state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
                      'target': np.concatenate((self.currentState[3:], distance / self.distanceScale))}
@@ -250,6 +337,41 @@ class ActiveParticle3DEnv():
                 orientation = np.random.randn(3)
                 self.currentState = np.concatenate((np.array([x, y, z], dtype=np.float32), orientation))
 
+
+        if self.obstacleFlag:
+            if self.config['dynamicTargetFlag']:
+                while True:
+                    r = random.randint(0, self.wallRadius - 1)
+                    angle = random.random() * np.pi * 2
+                    x = r * math.cos(angle) + self.wallRadius
+                    y = r * math.sin(angle) + self.wallRadius
+                    z = random.randint(0, self.wallHeight)
+                    if not self.inObstacle(np.array([x, y, z])):
+                        break
+
+                self.targetState = np.array([x, y, z], dtype=np.float)
+
+            if self.config['dynamicInitialStateFlag']:
+                while True:
+                    r = random.randint(0, self.wallRadius - 1)
+                    angle = random.random() * np.pi * 2
+                    x = r * math.cos(angle) + self.wallRadius
+                    y = r * math.sin(angle) + self.wallRadius
+                    z = random.randint(0, self.wallHeight)
+
+                    distanctVec = np.array([x, y, z],
+                                           dtype=np.float32) - self.targetState
+                    distance = np.linalg.norm(distanctVec, ord=np.inf)
+                    if distance < targetThresh and \
+                            not self.inObstacle(np.array([x, y, z], dtype=np.float32)) \
+                            and not self.is_terminal(distanctVec):
+                        break
+                # set initial state
+                print('target distance', distance)
+                orientation = np.random.randn(3)
+                self.currentState = np.concatenate((np.array([x, y, z], dtype=np.float32), orientation))
+
+
     def reset(self):
         self.stepCount = 0
 
@@ -257,6 +379,8 @@ class ActiveParticle3DEnv():
 
         self.info = {}
         self.info['scaleFactor'] = self.distanceScale
+        self.info['trapCount'] = 0
+        self.info['trapConfig'] = []
         self.epiCount += 1
 
 
@@ -264,12 +388,19 @@ class ActiveParticle3DEnv():
         self.model.createInitialState(self.currentState[0], self.currentState[1], self.currentState[2],
                                    self.currentState[3], self.currentState[4], self.currentState[5])
 
+
+
         # distance will be changed from lab coordinate to local coordinate
         distance = self.targetState - self.currentState[0:3]
 
         distanceLength = np.linalg.norm(distance, ord=2)
         distance = distance / distanceLength * min( self.targetClipLength, distanceLength)
+
+        self.info['currentTarget'] = distance.copy()
+
+
         if self.obstacleFlag:
+            self.getSensorInfo()
             state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
                      'target': np.concatenate((self.currentState[3:], distance / self.distanceScale))}
         else:

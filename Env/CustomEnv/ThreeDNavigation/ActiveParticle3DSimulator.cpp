@@ -164,7 +164,7 @@ void ActiveParticle3DSimulator::run(int steps, const std::vector<double>& action
 
 		}
 
-
+                particle->normalizeOri();
 
 
 		this->timeCounter++;
@@ -215,6 +215,17 @@ void ActiveParticle3DSimulator::createInitialState(double x, double y, double z,
 
 	this->timeCounter = 0;
 }
+
+void ActiveParticle3DSimulator::setInitialState(double x, double y, double z, double ori0, double ori1, double ori2){
+	particle->r[0] = x*radius;
+	particle->r[1] = y*radius;
+	particle->r[2] = z*radius;
+	particle->orientVec[0] = ori0;
+	particle->orientVec[1] = ori1;
+	particle->orientVec[2] = ori2;
+
+}
+
 
 void ActiveParticle3DSimulator::close() {
 	if (trajOs.is_open()) trajOs.close();
