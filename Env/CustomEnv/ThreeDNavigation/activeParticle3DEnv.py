@@ -11,7 +11,9 @@ from scipy.spatial import distance
 
 # notes for gravity
 # gravity will have unit of kT/a, then every second, the displacement is given by G D/kT
-# given G = 5kT/a, every second the displacement is 5 D/a and is 5 D/a^2 in radius
+# given G = 5kT/a, every second the displacement is 5 D/a and is 5 D/a^2 in radius,
+# which is around 0.1 a per s(D = 2.145 e-14)
+# if G = 50, then it is 1a per s
 
 # a dummy test env
 class ActiveParticle3DSimulatorPythonDummy:
@@ -152,6 +154,19 @@ class ActiveParticle3DEnv():
         if 'finishThresh' in self.config:
             self.finishThresh = self.config['finishThresh']
 
+        self.timingFlag = False
+        if 'timingFlag' in self.config:
+            self.timingFlag = self.config['timingFlag']
+
+            self.timeScale = 100
+            if 'timeScale' in self.config:
+                self.timeScale = self.config['timeScale']
+
+            self.timeWindowLocation = self.config['timeWindowLocation']
+            self.rewardArray = self.config['rewardArray']
+            self.randomEpisode = self.config['randomEpisode']
+
+
     def thresh_by_episode(self, step):
         return self.endThresh + (
                 self.startThresh - self.endThresh) * math.exp(-1. * step / self.distanceThreshDecay)
@@ -210,11 +225,19 @@ class ActiveParticle3DEnv():
                 stateNew = {'sensor': state['sensor'],
                          'target': np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale))}
             else:
-                stateNew = np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale))
+                if not self.timingFlag:
+                    stateNew = np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale))
+                else:
+                    stateNew = np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale, [state[-1]]))
 
             rewardNew = 1.0
+            if self.timingFlag:
+                if info['timeStep'] < self.timeWindowLocation[0]:
+                    rewardNew = -1.0
+
             actionNew = action
             return stateNew, actionNew, None, rewardNew
+
 
 
     def actionPenaltyCal(self, action):
@@ -286,6 +309,11 @@ class ActiveParticle3DEnv():
         if self.is_terminal(distance):
             reward = 1.0
             done = True
+            if self.timingFlag:
+                if self.stepCount < self.timeWindowLocation[0]:
+                    reward = -1.0
+                if self.stepCount > self.timeWindowLocation[0]:
+                    reward = 1.0
 
 
         # distance will be changed from lab coordinate to local coordinate
@@ -294,16 +322,29 @@ class ActiveParticle3DEnv():
 
         self.info['previousTarget'] = self.info['currentTarget'].copy()
         self.info['currentTarget'] = distance.copy()
-
+        self.info['distance'] = np.linalg.norm(distance)
+        self.info['timeStep'] = self.stepCount
         if self.obstacleFlag:
             state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
                      'target': np.concatenate((self.currentState[3:], distance / self.distanceScale))}
         else:
-            state = np.concatenate((self.currentState[3:], distance / self.distanceScale))
+            if not self.timingFlag:
+                state = np.concatenate((self.currentState[3:], distance / self.distanceScale))
+            else:
+                state = np.concatenate((self.currentState[3:], distance / self.distanceScale, [float(self.stepCount) / self.timeScale]))
         return state, reward, done, self.info.copy()
 
     def is_terminal(self, distance):
         return np.linalg.norm(distance, ord=np.inf) < self.finishThresh
+
+    def generateTimeStep(self):
+        if self.epiCount < self.randomEpisode:
+            return random.choice(list(range(self.timeWindowLocation[0], self.timeWindowLocation[1])))
+        elif self.epiCount < 2 * self.randomEpisode:
+            return random.choice(list(range(self.timeWindowLocation[1])))
+
+        else:
+            return 0
 
     def reset_helper(self):
         targetThresh = float('inf')
@@ -375,10 +416,15 @@ class ActiveParticle3DEnv():
     def reset(self):
         self.stepCount = 0
 
+        if self.timingFlag:
+            self.stepCount = self.generateTimeStep()
+
+
         self.hindSightInfo = {}
 
         self.info = {}
         self.info['scaleFactor'] = self.distanceScale
+        self.info['timeStep'] = self.stepCount
         self.info['trapCount'] = 0
         self.info['trapConfig'] = []
         self.epiCount += 1
@@ -397,14 +443,17 @@ class ActiveParticle3DEnv():
         distance = distance / distanceLength * min( self.targetClipLength, distanceLength)
 
         self.info['currentTarget'] = distance.copy()
-
+        self.info['distance'] = np.linalg.norm(distance)
 
         if self.obstacleFlag:
             self.getSensorInfo()
             state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
                      'target': np.concatenate((self.currentState[3:], distance / self.distanceScale))}
         else:
-            state = np.concatenate((self.currentState[3:], distance / self.distanceScale))
+            if not self.timingFlag:
+                state = np.concatenate((self.currentState[3:], distance / self.distanceScale))
+            else:
+                state = np.concatenate((self.currentState[3:], distance / self.distanceScale, [float(self.stepCount) / self.timeScale]))
         return state
 
     def initObsMat(self):
