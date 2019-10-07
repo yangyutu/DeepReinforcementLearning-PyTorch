@@ -87,7 +87,7 @@ class ActiveParticle3DEnv():
             self.sensorPixelSize = self.config['sensorPixelSize']
 
         self.receptWidth = 2 * self.receptHalfWidth + 1
-        self.targetClipLength = (2 * self.receptHalfWidth) * self.sensorPixelSize
+        self.targetClipLength = (2 * self.receptHalfWidth + 1) * self.sensorPixelSize
         self.stateDim = (self.receptWidth, self.receptWidth)
 
 
@@ -166,6 +166,10 @@ class ActiveParticle3DEnv():
             self.rewardArray = self.config['rewardArray']
             self.randomEpisode = self.config['randomEpisode']
 
+        self.localFrameFlag = False
+        if 'localFrameFlag' in self.config:
+            self.localFrameFlag = self.config['localFrameFlag']
+
 
     def thresh_by_episode(self, step):
         return self.endThresh + (
@@ -221,12 +225,22 @@ class ActiveParticle3DEnv():
             distanceLength = np.linalg.norm(distance, ord=2)
             distance = distance / distanceLength * min(self.targetClipLength, distanceLength)
             if self.obstacleFlag:
-
+                if self.localFrameFlag:
+                    orientVec = self.hindSightInfo['previousState'][3:]
+                    localTarget = self.getLocalTarget(distance, orientVec)
+                    targetStateNew = localTarget / self.distanceScale
+                else:
+                    targetStateNew = np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale))
                 stateNew = {'sensor': state['sensor'],
-                         'target': np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale))}
+                         'target': targetStateNew}
             else:
                 if not self.timingFlag:
-                    stateNew = np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale))
+                    if self.localFrameFlag:
+                        orientVec = self.hindSightInfo['previousState'][3:]
+                        localTarget = self.getLocalTarget(distance, orientVec)
+                        stateNew = localTarget / self.distanceScale
+                    else:
+                        stateNew = np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale))
                 else:
                     stateNew = np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale, [state[-1]]))
 
@@ -273,7 +287,18 @@ class ActiveParticle3DEnv():
 
         return False
 
-
+    def getLocalTarget(self, target, orientVec = None):
+        if orientVec is None:
+            self.localFrame = self.model.getLocalFrame()
+            self.localFrame.shape = (3, 3)
+            localTarget = np.dot(self.localFrame, target.T)
+        else:
+            phi = math.atan2(orientVec[1], orientVec[0])
+            orientVec2 = np.array([-math.sin(phi), math.cos(phi), 0])
+            orientVec3 = np.cross(orientVec, orientVec2)
+            localFrame = np.array([orientVec, orientVec2, orientVec3])
+            localTarget = np.dot(localFrame, target.T)
+        return localTarget
 
     def step(self, action):
         self.hindSightInfo['obstacle'] = False
@@ -283,6 +308,7 @@ class ActiveParticle3DEnv():
         #    action = self.getCustomAction()
         self.model.step(self.nStep, action)
         self.currentState = self.model.getPositions()
+
         #self.currentState = self.currentState + 2.0 * np.array([action[0], action[1], 0])
 
         hitObs = self.inObstacle(self.currentState[0:3])
@@ -321,15 +347,30 @@ class ActiveParticle3DEnv():
         distance = distance / distanceLength * min( self.targetClipLength, distanceLength)
 
         self.info['previousTarget'] = self.info['currentTarget'].copy()
-        self.info['currentTarget'] = distance.copy()
+        self.info['currentTarget'] = distance + self.currentState[:3]
         self.info['distance'] = np.linalg.norm(distance)
         self.info['timeStep'] = self.stepCount
         if self.obstacleFlag:
+
+            self.getSensorInfo()
+
+            if self.localFrameFlag:
+                localTarget = self.getLocalTarget(distance)
+                self.info['localFrame'] = self.localFrame
+                targetState = localTarget / self.distanceScale
+            else:
+                targetState = np.concatenate((self.currentState[3:], distance / self.distanceScale))
+
             state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                     'target': np.concatenate((self.currentState[3:], distance / self.distanceScale))}
+                     'target': targetState}
         else:
             if not self.timingFlag:
-                state = np.concatenate((self.currentState[3:], distance / self.distanceScale))
+                if self.localFrameFlag:
+                    localTarget = self.getLocalTarget(distance)
+                    self.info['localFrame'] = self.localFrame
+                    state = localTarget / self.distanceScale
+                else:
+                    state = np.concatenate((self.currentState[3:], distance / self.distanceScale))
             else:
                 state = np.concatenate((self.currentState[3:], distance / self.distanceScale, [float(self.stepCount) / self.timeScale]))
         return state, reward, done, self.info.copy()
@@ -442,16 +483,29 @@ class ActiveParticle3DEnv():
         distanceLength = np.linalg.norm(distance, ord=2)
         distance = distance / distanceLength * min( self.targetClipLength, distanceLength)
 
-        self.info['currentTarget'] = distance.copy()
+        self.info['currentTarget'] = distance + self.currentState[:3]
         self.info['distance'] = np.linalg.norm(distance)
 
         if self.obstacleFlag:
             self.getSensorInfo()
+            if self.localFrameFlag:
+                localTarget = self.getLocalTarget(distance)
+                self.info['localFrame'] = self.localFrame
+                targetState = localTarget / self.distanceScale
+            else:
+                targetState = np.concatenate((self.currentState[3:], distance / self.distanceScale))
+
+
             state = {'sensor': np.expand_dims(self.sensorInfoMat, axis=0),
-                     'target': np.concatenate((self.currentState[3:], distance / self.distanceScale))}
+                     'target': targetState}
         else:
             if not self.timingFlag:
-                state = np.concatenate((self.currentState[3:], distance / self.distanceScale))
+                if self.localFrameFlag:
+                    localTarget = self.getLocalTarget(distance)
+                    self.info['localFrame'] = self.localFrame
+                    state = localTarget / self.distanceScale
+                else:
+                    state = np.concatenate((self.currentState[3:], distance / self.distanceScale))
             else:
                 state = np.concatenate((self.currentState[3:], distance / self.distanceScale, [float(self.stepCount) / self.timeScale]))
         return state

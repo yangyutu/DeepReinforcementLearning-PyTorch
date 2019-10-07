@@ -141,7 +141,7 @@ def experienceProcessor(state, action, nextState, reward, info):
     if nextState is not None:
         target = info['previousTarget']
         distance = target - info['currentState'][:3]
-        localDistance = np.dot(info['localFrame'], distance)
+        localDistance = np.dot(info['localFrame'], distance.T)
         nextState['target'] = localDistance / info['scaleFactor']
     return state, action, nextState, reward
 
@@ -154,7 +154,7 @@ with open(configName,'r') as f:
 def obstacleConstructorCallBack():
     obstacles, obstacleCenter = [], []
 
-    obstacles.append(ThreeDObstacle(np.array([15, 15, 15]), 5.0, 0.5, 2, np.array([0.0, 0.0, 1.0])))
+    obstacles.append(ThreeDObstacle(np.array([1, 1, 1]), 1.0, 0.5, 0.5, np.array([0.0, 0.0, 1.0])))
 
     obstacleCenter.append(obstacles[0].center)
 

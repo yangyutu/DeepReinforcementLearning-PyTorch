@@ -21,8 +21,8 @@
     "BDModelcustomIniConfig":true,
     "receptHalfWidth": 5,
     "obstacleMapPaddingWidth": 30,
-    "wallRadius": 15,
-	"wallHeight": 40,
+    "wallRadius": 25,
+	"wallHeight": 50,
     "sensorPixelSize": 2,
 	"distance_thresh_decay": 100,
     "epsilon_decay": 20000,
@@ -48,8 +48,8 @@
     "priorityMemory_absErrUpper": 5,
     "device": "cuda",
     "targetState": [
-        15.0,
-        15.0,
+        25.0,
+        25.0,
         25.0
     ],
     "currentState": [
@@ -61,7 +61,8 @@
         0.0
     ],
     "dynamicInitialStateFlag": true,
-    "dynamicTargetFlag": true,
+    "dynamicTargetFlag": false,
+
     "targetThreshFlag": true,
 	"target_start_thresh": 0.05,
 	"target_end_thresh": 1.0,
