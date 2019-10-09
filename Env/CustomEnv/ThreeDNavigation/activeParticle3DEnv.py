@@ -27,13 +27,19 @@ class ActiveParticle3DSimulatorPythonDummy:
         self.currentState = np.array([x, y, z, ori0, ori1, ori2])
 
 
-class ThreeDObstacle:
+class RBCObstacle:
 
-    def __init__(self, center, radius, slope, centralHeight, orientVec):
+    def __init__(self, center, scale, slope, centralHeight, orientVec):
+        # here I use unit of 1um, a RBC has diameter of 8um, thickness at thickest point of 2.5um
+        # a minimum thickness is 1um
+        # based on these parameters we have the following
         self.center = center
-        self.centralHeight = centralHeight
-        self.radius = radius
-        self.slope = slope
+        self.scale = scale
+
+        self.centralHeight = 0.5 * scale
+
+        self.radius = 4 * scale
+        self.slope = 0.2
         self.orientVec = orientVec
 
     def isInside(self, pointVec):
@@ -261,7 +267,7 @@ class ActiveParticle3DEnv():
 
     def outsideWall(self, points):
 
-        distance2Axis = np.linalg.norm(points - np.array([self.wallRadius, self.wallRadius, 0]), axis = 1)
+        distance2Axis = np.linalg.norm(points, axis = 1)
 
         return np.logical_or(distance2Axis > self.wallRadius, np.logical_or(points[:,2] < 0.0, points[:,2] > self.wallHeight))
 
@@ -425,8 +431,8 @@ class ActiveParticle3DEnv():
                 while True:
                     r = random.randint(0, self.wallRadius - 1)
                     angle = random.random() * np.pi * 2
-                    x = r * math.cos(angle) + self.wallRadius
-                    y = r * math.sin(angle) + self.wallRadius
+                    x = r * math.cos(angle)
+                    y = r * math.sin(angle)
                     z = random.randint(0, self.wallHeight)
                     if not self.inObstacle(np.array([x, y, z])):
                         break
@@ -437,8 +443,8 @@ class ActiveParticle3DEnv():
                 while True:
                     r = random.randint(0, self.wallRadius - 1)
                     angle = random.random() * np.pi * 2
-                    x = r * math.cos(angle) + self.wallRadius
-                    y = r * math.sin(angle) + self.wallRadius
+                    x = r * math.cos(angle)
+                    y = r * math.sin(angle)
                     z = random.randint(0, self.wallHeight)
 
                     distanctVec = np.array([x, y, z],
