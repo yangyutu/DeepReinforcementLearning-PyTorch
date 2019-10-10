@@ -39,13 +39,23 @@ void ActiveParticle3DSimulator::readConfigFile() {
 
 
 	diffusivity_r = 0.161; // characteristic time scale is about 6s
+        if (config.contains("Dr")) {
+                diffusivity_r= config["Dr"];
+        }        
+        
 	Tc = 1.0 / diffusivity_r;
 
 	maxSpeed = config["maxSpeed"]; //units of radius per chacteristic time
 	maxRotationSpeed = config["maxRotationSpeed"];
+        
 	radius = config["radius"];
 	maxSpeed = maxSpeed * radius / Tc;
-    gravity = 0.0;
+        if (config.contains("circularRadius")){
+            circularRadius = config["circularRadius"];
+            maxRotationSpeed = maxSpeed / circularRadius / radius;
+        }
+        
+        gravity = 0.0;
     if (config.contains("gravity")) {
 	    gravity = config["gravity"];
 	     gravity *= kb * T / radius;
@@ -61,7 +71,10 @@ void ActiveParticle3DSimulator::readConfigFile() {
 	diffusivity_t = 2.145e-13; // this corresponds the diffusivity of 1um particle
 	diffusivity_t = 2.145e-14; // here I want to manually decrease the random noise
 							   //diffusivity_r = parameter.diffu_r; // this correponds to rotation diffusity of 1um particle
-
+	if (config.contains("Dt")) {
+            diffusivity_t = config["Dt"];
+	}
+        
 	Bpp = config["Bpp"];
 	Bpp = Bpp * kb * T * 1e9; //2.29 is Bpp/a/kT
 	Kappa = config["kappa"]; // here is kappa*radius

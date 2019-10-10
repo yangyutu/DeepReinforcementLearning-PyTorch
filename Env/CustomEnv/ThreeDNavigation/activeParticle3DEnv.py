@@ -29,7 +29,7 @@ class ActiveParticle3DSimulatorPythonDummy:
 
 class RBCObstacle:
 
-    def __init__(self, center, scale, slope, centralHeight, orientVec):
+    def __init__(self, center, scale, orientVec):
         # here I use unit of 1um, a RBC has diameter of 8um, thickness at thickest point of 2.5um
         # a minimum thickness is 1um
         # based on these parameters we have the following
@@ -283,8 +283,8 @@ class ActiveParticle3DEnv():
                     if inObstacle[0]:
                         return True
 
-            # check if outside the all
-            r = math.sqrt((point[0] - self.wallRadius)**2 + (point[1] - self.wallRadius)**2)
+            # check if outside the wall
+            r = math.sqrt((point[0])**2 + (point[1])**2)
             if r > self.wallRadius:
                 return True
 

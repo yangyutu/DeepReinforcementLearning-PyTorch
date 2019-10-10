@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import torch
 from utils.OUNoise import OUNoise
 from activeParticleEnv import ActiveParticleEnvMultiMap, ActiveParticleEnv
-from Env.CustomEnv.ThreeDNavigation.activeParticle3DEnv import ActiveParticle3DEnv, ThreeDObstacle
+from Env.CustomEnv.ThreeDNavigation.activeParticle3DEnv import ActiveParticle3DEnv, RBCObstacle
 
 import math
 torch.manual_seed(1)
@@ -152,11 +152,17 @@ with open(configName,'r') as f:
     config = json.load(f)
 
 def obstacleConstructorCallBack():
+    configName = 'config_RBC.json'
+    with open(configName, 'r') as f:
+        config = json.load(f)
+
     obstacles, obstacleCenter = [], []
 
-    obstacles.append(ThreeDObstacle(np.array([15, 15, 15]), 5.0, 0.5, 2, np.array([0.0, 0.0, 1.0])))
+    for i in range(config['numObstacles']):
+        name = 'obs' + str(i)
+        obstacles.append(RBCObstacle(np.array(config[name]['center']), config[name]['scale'], np.array(config[name]['orient'])))
 
-    obstacleCenter.append(obstacles[0].center)
+        obstacleCenter.append(obstacles[i].center)
 
     return obstacles, obstacleCenter
 

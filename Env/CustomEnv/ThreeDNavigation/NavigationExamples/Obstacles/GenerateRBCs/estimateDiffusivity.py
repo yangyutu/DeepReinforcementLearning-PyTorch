@@ -32,3 +32,5 @@ xyStd = math.sqrt(2*T*D0) / a
 angleStd = math.sqrt(2*T*Dr0) * 180 / np.pi
 print(Dt, D0, Dr, Dr0, tau)
 print(xyStd, angleStd)
+#2.145e-13 1.6327694161801638e-13 0.161 0.48983082485404916 2.04152117273951
+#0.23094010767585033 11.459155902616464

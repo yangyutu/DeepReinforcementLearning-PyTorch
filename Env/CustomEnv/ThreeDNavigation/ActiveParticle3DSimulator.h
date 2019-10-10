@@ -102,7 +102,7 @@ private:
 	static const int dimP = 3;
 	static const double kb, T, vis;
 	int randomSeed;
-	double maxSpeed, maxTurnSpeed, maxRotationSpeed;
+	double maxSpeed, maxTurnSpeed, maxRotationSpeed, circularRadius;
 	std::string configName;
 	std::shared_ptr<ParticleState> particle;
 	double radius, radius_nm;

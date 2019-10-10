@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import euclidean_distances
 
 np.random.seed(4)
-
+random.seed(1)
 height = 100
 radius = 50
 thresh = 2
