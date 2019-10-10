@@ -15,7 +15,7 @@
     "filetag":"Traj/trajOut",
     "maxSpeed": 100,
     "maxRotationSpeed": 2.5,
-    "circularRadius": 5,
+    "circularRadius": 1,
     "angleRatio": 1.0,
     "obstacleFlag": true,
     "wallFlag": true,
