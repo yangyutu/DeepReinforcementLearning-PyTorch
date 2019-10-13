@@ -53,6 +53,7 @@ void ActiveParticle3DSimulator::readConfigFile() {
         if (config.contains("circularRadius")){
             circularRadius = config["circularRadius"];
             maxRotationSpeed = maxSpeed / circularRadius / radius;
+            relaxationTimeInverse = maxSpeed / circularRadius / radius;
         }
         
         gravity = 0.0;
@@ -115,6 +116,83 @@ std::vector<double> ActiveParticle3DSimulator::get_positions_cpp() {
 	positions[4] = particle->orientVec[1];
 	positions[5] = particle->orientVec[2];
 	return positions;
+}
+
+void ActiveParticle3DSimulator::run_given_director(int steps, const std::vector<double>& director,bool local) {
+
+	if (particle->type == ParticleType::VANILLASP) {
+		exit(2);
+	}
+
+	if (particle->type == ParticleType::SLIDER) {
+		particle->u = 1.0;
+		particle->v = 0;
+		particle->w = 0;
+	}
+
+        std::vector<double> globalDirector(3, 0); 
+
+        
+
+	for (int stepCount = 0; stepCount < steps; stepCount++) {
+		if (((this->timeCounter) == 0) && trajOutputFlag) {
+			this->outputTrajectory(this->trajOs);
+		}
+
+                if (local) {
+                    globalDirector[0] = particle->orientVec[0] * director[0] + 
+                                        particle->oriMoveDirection[0][0] * director[1] + 
+                                        particle->oriMoveDirection[1][0] * director[2];
+                    globalDirector[1] = particle->orientVec[1] * director[0] + 
+                                        particle->oriMoveDirection[0][1] * director[1] + 
+                                        particle->oriMoveDirection[1][1] * director[2];
+                    globalDirector[2] = particle->orientVec[2] * director[0] + 
+                                        particle->oriMoveDirection[0][2] * director[1] + 
+                                        particle->oriMoveDirection[1][2] * director[2];
+                } else {
+                    globalDirector[0] = director[0];
+                    globalDirector[1] = director[1];
+                    globalDirector[2] = director[2];            
+                }
+                
+		particle->F[2] = gravity;
+
+		for (int i = 0; i < 3; i++) {
+			particle->r[i] += (mobility * particle->F[i] + particle->u * maxSpeed * particle->orientVec[i]) * dt_;
+		}
+
+		double dot = particle->orientVec[0] * globalDirector[0] + particle->orientVec[1] * globalDirector[1] + particle->orientVec[2] * globalDirector[2];
+		for (int i = 0; i < 3; i++) {
+			
+			particle->orientVec[i] += (globalDirector[i] - dot * particle->orientVec[i]) * dt_ * relaxationTimeInverse;
+		}
+
+		if (randomMoveFlag) {
+			double randomPos[3], randomOriMove[2];
+
+			for (int i = 0; i < 3; i++) {
+				randomPos[i] = sqrt(2.0 * diffusivity_t * dt_) * rand_normal(rand_generator);
+				particle->r[i] += randomPos[i];
+			}
+			for (int i = 0; i < 2; i++) {
+				randomOriMove[i] = sqrt(2.0 * diffusivity_r * dt_) * rand_normal(rand_generator);
+
+			}
+			for (int i = 0; i < 3; i++) {
+				particle->orientVec[i] += (particle->oriMoveDirection[0][i] * randomOriMove[0] + particle->oriMoveDirection[1][i] * randomOriMove[1]) * dt_;
+			}
+
+		}
+		particle->normalizeOri();
+
+
+		this->timeCounter++;
+		if (((this->timeCounter) % trajOutputInterval == 0) && trajOutputFlag) {
+			particle->normalizeOri();
+			this->outputTrajectory(this->trajOs);
+		}
+	}
+	particle->updateAngles();
 }
 
 
@@ -319,4 +397,15 @@ void ActiveParticle3DSimulator::step(int nstep, py::array_t<double>& actions) {
 
 
 	run(nstep, actions_cpp);
+}
+
+void ActiveParticle3DSimulator::stepGivenDirector(int nstep, py::array_t<double>& actions, bool localFlag) {
+
+	auto buf = actions.request();
+	double *ptr = (double *)buf.ptr;
+	int size = buf.size;
+	std::vector<double> actions_cpp(ptr, ptr + size);
+
+
+	run_given_director(nstep, actions_cpp, localFlag);
 }

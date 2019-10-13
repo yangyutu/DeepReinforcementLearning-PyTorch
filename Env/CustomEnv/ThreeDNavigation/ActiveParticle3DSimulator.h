@@ -72,6 +72,11 @@ struct ParticleState {
 
 	}
 
+        //void updateAngles(double t0, double t1, double t2){
+        //establish local frame based on self-orient and the target's position
+        
+        
+        //}
 
 };
 
@@ -86,11 +91,14 @@ public:
 	}
 	void runHelper();
 	void run(int steps, const std::vector<double>& actions);
+        void run_given_director(int steps, const std::vector<double>& director, bool local);
 	void createInitialState(double x, double y, double z, double ori0, double ori1, double ori2);
 	void calForces();
 	void readConfigFile();
 	void close();
 	void step(int nstep, py::array_t<double>& actions);
+        void stepGivenDirector(int nstep, py::array_t<double>& actions, bool local);
+        
 	void setInitialState(double x, double y, double z, double ori0, double ori1, double ori2);
 	py::array_t<double> get_positions();
 	py::array_t<double> get_particle_local_frame();
@@ -102,7 +110,7 @@ private:
 	static const int dimP = 3;
 	static const double kb, T, vis;
 	int randomSeed;
-	double maxSpeed, maxTurnSpeed, maxRotationSpeed, circularRadius;
+	double maxSpeed, maxTurnSpeed, maxRotationSpeed, circularRadius, relaxationTimeInverse;
 	std::string configName;
 	std::shared_ptr<ParticleState> particle;
 	double radius, radius_nm;

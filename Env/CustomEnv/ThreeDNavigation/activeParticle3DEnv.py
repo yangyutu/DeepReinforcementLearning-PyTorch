@@ -88,12 +88,16 @@ class ActiveParticle3DEnv():
         self.receptHalfWidth = self.config['receptHalfWidth']
         self.padding = self.config['obstacleMapPaddingWidth']
 
-        self.sensorPixelSize = 4
+        self.sensorPixelSize = 2
         if 'sensorPixelSize' in self.config:
             self.sensorPixelSize = self.config['sensorPixelSize']
 
         self.receptWidth = 2 * self.receptHalfWidth + 1
         self.targetClipLength = (2 * self.receptHalfWidth + 1) * self.sensorPixelSize
+
+        if 'targetClipLength' in self.config:
+            self.targetClipLength = self.config['targetClipLength']
+
         self.stateDim = (self.receptWidth, self.receptWidth)
 
 
@@ -176,6 +180,14 @@ class ActiveParticle3DEnv():
         if 'localFrameFlag' in self.config:
             self.localFrameFlag = self.config['localFrameFlag']
 
+        self.orientControlFlag = False
+        if 'orientControlFlag' in self.config:
+            self.orientControlFlag = self.config['orientControlFlag']
+            if self.orientControlFlag:
+                if self.particleType == 'VANILLASP':
+                    raise Exception("particle type vanilla does not support orientControl")
+                self.nbActions = 3
+
 
     def thresh_by_episode(self, step):
         return self.endThresh + (
@@ -196,13 +208,16 @@ class ActiveParticle3DEnv():
     # sensor information needs to consider orientation information
     # add integer resentation of location
     #    index = self.senorIndex + self.currentState + np.array([self.padding, self.padding])
-        localFrame = self.model.getLocalFrame()
+        self.localFrame = self.model.getLocalFrame()
     # in local Frame, each row is the vector of the local frame
     # transform from local coordinate to global coordinate is then given by localFrame * localCood or localCood * localFrame
-        localFrame.shape = (3, 3)
+        self.localFrame.shape = (3, 3)
     # this is rotation matrix transform from local coordinate system to lab coordinate system
-        rotMatrx = localFrame
-        sensorGlobalPos = np.matmul(self.sensorPos, rotMatrx.T)
+        rotMatrx = self.localFrame
+        if self.localFrameFlag:
+            sensorGlobalPos = np.matmul(self.sensorPos, rotMatrx.T)
+        else:
+            sensorGlobalPos = self.sensorPos.copy().astype(np.float32)
 
         sensorGlobalPos[:, 0] += self.currentState[0]
         sensorGlobalPos[:, 1] += self.currentState[1]
@@ -235,6 +250,8 @@ class ActiveParticle3DEnv():
                     orientVec = self.hindSightInfo['previousState'][3:]
                     localTarget = self.getLocalTarget(distance, orientVec)
                     targetStateNew = localTarget / self.distanceScale
+                    targetStateNew = np.concatenate((self.hindSightInfo['previousState'][3:], localTarget / self.distanceScale))
+
                 else:
                     targetStateNew = np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale))
                 stateNew = {'sensor': state['sensor'],
@@ -245,6 +262,8 @@ class ActiveParticle3DEnv():
                         orientVec = self.hindSightInfo['previousState'][3:]
                         localTarget = self.getLocalTarget(distance, orientVec)
                         stateNew = localTarget / self.distanceScale
+                        stateNew = np.concatenate(
+                            (self.hindSightInfo['previousState'][3:], localTarget / self.distanceScale))
                     else:
                         stateNew = np.concatenate((self.hindSightInfo['previousState'][3:], distance / self.distanceScale))
                 else:
@@ -312,7 +331,10 @@ class ActiveParticle3DEnv():
         reward = 0.0
         #if self.customExploreFlag and self.epiCount < self.customExploreEpisode:
         #    action = self.getCustomAction()
-        self.model.step(self.nStep, action)
+        if not self.orientControlFlag:
+            self.model.step(self.nStep, action)
+        else:
+            self.model.stepGivenDirector(self.nStep, action, self.localFrameFlag)
         self.currentState = self.model.getPositions()
 
         #self.currentState = self.currentState + 2.0 * np.array([action[0], action[1], 0])
@@ -359,11 +381,13 @@ class ActiveParticle3DEnv():
         if self.obstacleFlag:
 
             self.getSensorInfo()
-
+            self.info['localFrame'] = self.localFrame
             if self.localFrameFlag:
                 localTarget = self.getLocalTarget(distance)
-                self.info['localFrame'] = self.localFrame
+
                 targetState = localTarget / self.distanceScale
+                targetState = np.concatenate((self.currentState[3:], localTarget / self.distanceScale))
+
             else:
                 targetState = np.concatenate((self.currentState[3:], distance / self.distanceScale))
 
@@ -374,7 +398,7 @@ class ActiveParticle3DEnv():
                 if self.localFrameFlag:
                     localTarget = self.getLocalTarget(distance)
                     self.info['localFrame'] = self.localFrame
-                    state = localTarget / self.distanceScale
+                    state = np.concatenate((self.currentState[3:], localTarget / self.distanceScale))
                 else:
                     state = np.concatenate((self.currentState[3:], distance / self.distanceScale))
             else:
@@ -494,10 +518,13 @@ class ActiveParticle3DEnv():
 
         if self.obstacleFlag:
             self.getSensorInfo()
+            self.info['localFrame'] = self.localFrame
             if self.localFrameFlag:
                 localTarget = self.getLocalTarget(distance)
-                self.info['localFrame'] = self.localFrame
+
                 targetState = localTarget / self.distanceScale
+                targetState = np.concatenate((self.currentState[3:], localTarget / self.distanceScale))
+
             else:
                 targetState = np.concatenate((self.currentState[3:], distance / self.distanceScale))
 
@@ -510,6 +537,7 @@ class ActiveParticle3DEnv():
                     localTarget = self.getLocalTarget(distance)
                     self.info['localFrame'] = self.localFrame
                     state = localTarget / self.distanceScale
+                    state = np.concatenate((self.currentState[3:], localTarget / self.distanceScale))
                 else:
                     state = np.concatenate((self.currentState[3:], distance / self.distanceScale))
             else:

@@ -23,6 +23,7 @@ PYBIND11_MODULE(ActiveParticle3DSimulatorPython, m) {
         .def("createInitialState", &ActiveParticle3DSimulator::createInitialState)
         .def("setInitialState", &ActiveParticle3DSimulator::setInitialState)
         .def("step", &ActiveParticle3DSimulator::step)
+        .def("stepGivenDirector", &ActiveParticle3DSimulator::stepGivenDirector)
         .def("getLocalFrame", &ActiveParticle3DSimulator::get_particle_local_frame)
     	.def("getPositions", &ActiveParticle3DSimulator::get_positions);
 }
