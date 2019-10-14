@@ -203,7 +203,13 @@ class ActiveParticle3DEnv():
     def constructObstacles(self):
 
         if not self.multiMapFlag:
-            self.obstacles, self.obstacleCenters = self.obstacleConstructorCallBack()
+
+            mapName = None
+            if 'mapName' in self.config:
+                mapName = self.config['mapName']
+                self.obstacles, self.obstacleCenters = self.obstacleConstructorCallBack(mapName)
+            else:
+                self.obstacles, self.obstacleCenters = self.obstacleConstructorCallBack()
         else:
 
             self.obstaclesList = []
@@ -328,7 +334,7 @@ class ActiveParticle3DEnv():
 
             # check if outside the wall
             r = math.sqrt((point[0])**2 + (point[1])**2)
-            if r > self.wallRadius:
+            if r > (self.wallRadius - 1.0):
                 return True
 
             if point[2] > self.wallHeight or point[2] < 0.0:
