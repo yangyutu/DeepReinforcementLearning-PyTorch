@@ -48,9 +48,7 @@ class RBCObstacle:
         Heights = abs(np.dot(distanceVec, self.orientVec))
         distance2Axis = np.linalg.norm((distanceVec - np.outer(Heights, self.orientVec)), axis = 1)
 
-        return np.logical_and(distance2Axis < self.radius,(Heights - self.centralHeight - distance2Axis * self.slope) < 0.0)
-
-
+        return np.logical_and(distance2Axis < (self.radius - 1.0),(Heights - self.centralHeight - distance2Axis * self.slope) < 1.0)
 
 
 class ActiveParticle3DEnv():
@@ -140,11 +138,20 @@ class ActiveParticle3DEnv():
         if 'obstacleFlag' in self.config:
             self.obstacleFlag = self.config['obstacleFlag']
 
+        self.multiMapFlag = False
+
         if self.obstacleFlag:
-            self.constructObstacles()
 
             self.wallRadius = self.config['wallRadius']
             self.wallHeight = self.config['wallHeight']
+
+            if 'multiMapFlag' in self.config:
+                self.multiMapFlag = self.config['multiMapFlag']
+                if self.multiMapFlag:
+                    self.multiMapProbs = self.config['multiMapProbs']
+                    self.multiMapNames = self.config['multiMapNames']
+                    self.numMaps = len(self.multiMapNames)
+            self.constructObstacles()
 
         self.nStep = self.config['modelNStep']
 
@@ -194,8 +201,25 @@ class ActiveParticle3DEnv():
                 self.startThresh - self.endThresh) * math.exp(-1. * step / self.distanceThreshDecay)
 
     def constructObstacles(self):
-        self.obstacles, self.obstacleCenters = self.obstacleConstructorCallBack()
 
+        if not self.multiMapFlag:
+            self.obstacles, self.obstacleCenters = self.obstacleConstructorCallBack()
+        else:
+
+            self.obstaclesList = []
+            self.obstaclesCentersList = []
+            self.wallHeights = []
+            self.wallRadii = []
+            for mapName in self.multiMapNames:
+                obstacles, obstacleCenters = self.obstacleConstructorCallBack(mapName)
+                self.obstaclesCentersList.append(obstacleCenters)
+                self.obstaclesList.append(obstacles)
+
+                with open(mapName, 'r') as f:
+                    config = json.load(f)
+                wallHeight, wallRadius = config['heightRadius']
+                self.wallHeights.append(wallHeight)
+                self.wallRadii.append(wallRadius)
 
     def constructSensorArrayIndex(self):
         x_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
@@ -484,11 +508,22 @@ class ActiveParticle3DEnv():
                 self.currentState = np.concatenate((np.array([x, y, z], dtype=np.float32), orientation))
 
 
+    def resetMap(self):
+
+        index = np.random.choice(self.numMaps, 1, p=self.multiMapProbs)[0]
+        self.obstacles, self.obstacleCenters = self.obstaclesList[index], self.obstaclesCentersList[index]
+        self.wallHeight, self.wallRadius = self.wallHeights[index], self.wallRadii[index]
+        print('reset map', self.multiMapNames[index], self.wallHeight, self.wallRadius)
+
+
     def reset(self):
         self.stepCount = 0
 
         if self.timingFlag:
             self.stepCount = self.generateTimeStep()
+
+        if self.multiMapFlag:
+            self.resetMap()
 
 
         self.hindSightInfo = {}
