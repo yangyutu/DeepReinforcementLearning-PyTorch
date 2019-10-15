@@ -61,6 +61,7 @@ class Ellipsoid:
 
         self.center_old = self.center.copy()
         self.orient_old = self.orient.copy()
+        self.keyPoints_old = self.keyPoints.copy()
         self.center += self.posMove
         self.orient += self.orientMove
         self.orient /= np.linalg.norm(self.orient)
@@ -70,8 +71,7 @@ class Ellipsoid:
     def moveBack(self):
         self.center = self.center_old
         self.orient = self.orient_old
-
-        self.generateKeyPoints()
+        self.keyPoints = self.keyPoints_old
 
     def isOverlap(self, second):
         dist = euclidean_distances(self.keyPoints, second.keyPoints)
@@ -124,7 +124,8 @@ class MonteCarloSimulation:
         dist[dist == 0] = 100
 
         for i in range(dist.shape[1]):
-            if dist[0, i] < self.radius * self.scales[index] * 3:
+            # 2.0 is the maximum scale
+            if dist[0, i] < self.radius * 2.0 * 2:
                 if self.ellipsoids[index].isOverlap(self.ellipsoids[i]):
                     return True
         return False
