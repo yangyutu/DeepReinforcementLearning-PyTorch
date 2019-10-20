@@ -33,11 +33,11 @@ class PathFinderThreeD:
             self.obstacleCenter.append(self.obstacles[i].center)
 
     def _generateGridPoints(self):
-        numP = 2 * int(self.radius)
+        numP = int(self.radius)
         x = np.linspace(-self.radius, self.radius, numP)
         y = np.linspace(-self.radius, self.radius, numP)
 
-        numP = int(self.height)
+        numP = int(self.height / 2 )
         z = np.linspace(0, self.height, numP)
         [X, Y, Z] = np.meshgrid(x, y, z)
         self.gridPoints = np.array([X.flatten(), Y.flatten(), Z.flatten()]).T

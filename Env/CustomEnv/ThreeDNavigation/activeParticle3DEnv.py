@@ -226,6 +226,8 @@ class ActiveParticle3DEnv():
                 wallHeight, wallRadius = config['heightRadius']
                 self.wallHeights.append(wallHeight)
                 self.wallRadii.append(wallRadius)
+            self.obstacles, self.obstacleCenters = self.obstaclesList[0], self.obstaclesCentersList[0]
+            self.wallHeight, self.wallRadius = self.wallHeights[0], self.wallRadii[0]
 
     def constructSensorArrayIndex(self):
         x_int = np.arange(-self.receptHalfWidth, self.receptHalfWidth + 1)
@@ -379,6 +381,7 @@ class ActiveParticle3DEnv():
 
             self.hindSightInfo['obstacle'] = True
             self.info['trapCount'] += 1
+            reward -= self.obstaclePenalty
 
         self.hindSightInfo['currentState'] = self.currentState.copy()
         self.info['currentState'] = self.currentState.copy()
@@ -393,11 +396,15 @@ class ActiveParticle3DEnv():
         if self.is_terminal(distance):
             reward = 1.0
             done = True
+
+
+
             if self.timingFlag:
                 if self.stepCount < self.timeWindowLocation[0]:
                     reward = -1.0
                 if self.stepCount > self.timeWindowLocation[0]:
                     reward = 1.0
+
 
 
         # distance will be changed from lab coordinate to local coordinate

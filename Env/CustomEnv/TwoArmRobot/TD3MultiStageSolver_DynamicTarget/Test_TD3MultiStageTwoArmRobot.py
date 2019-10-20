@@ -6,12 +6,14 @@ from utils.netInit import xavier_init
 import json
 from torch import optim
 from copy import deepcopy
+import math
 from Env.CustomEnv.StablizerOneD import StablizerOneD
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+import random
 from utils.OUNoise import OUNoise
 from Env.CustomEnv.TwoArmRobot.TwoArmRobotEnv import TwoArmEnvironmentContinuousTwoStage
 torch.manual_seed(1)
@@ -159,3 +161,52 @@ for i in range(value.shape[0]):
             if done['global']:
                 break
         print('done in step:', k)
+
+# now consider the random initial position
+print('now consider the random initial position')
+print('now consider the random initial position')
+
+nTraj = 50
+record = []
+for n in range(nTraj):
+
+    target = config['targetState']
+    controller.env.targetState = np.array(target)
+    length = random.random() * np.sqrt(np.sum(np.square(controller.env.armLength)))
+    angle = random.random() * 2 * np.pi
+    x = length * math.cos(angle)
+    y = length * math.sin(angle)
+    print('initial position', x, y)
+    theta1, theta2 = controller.env.inverseKM(x, y)
+    controller.env.currentState = np.array([theta1, theta2])
+    controller.env.stageID = 0
+    controller.env.done = {'stage': [False, False], 'global': False}
+    observation = controller.env.constructObservation()
+
+    # transitions of stages
+    dist = controller.env.effectorPosition - controller.env.targetState
+
+    if np.linalg.norm(dist, ord=2) < controller.env.transitionDistance:
+        controller.env.done['stage'][0] = True
+        controller.env.stageID = 1
+    print('initial stage', controller.env.stageID)
+    controller.env.stepCount = 0
+
+    observation[4:6] /= controller.env.stageDistanceScales[controller.env.stageID]
+    record.append([n] + controller.env.effectorPosition.tolist())
+
+    for k in range(50):
+
+        action = controller.agents[1].select_action(state=observation, noiseFlag=False)
+        nextState,  reward, done, _ = controller.env.step(action)
+        record.append([n] + controller.env.effectorPosition.tolist())
+        observation = nextState['state']
+
+        if done['global']:
+            break
+    print('done in step:', k)
+
+
+
+output = np.array(record)
+np.savetxt('outputTraj.txt', output)
