@@ -33,3 +33,6 @@ pathLengthTotal, pathCoordinates = finder.findPath(start, end)
 print(pathLengthTotal)
 
 print(pathCoordinates)
+
+#pathLength2 = finder.findPath_SingleTarget([start], end)
+#print(pathLength2)

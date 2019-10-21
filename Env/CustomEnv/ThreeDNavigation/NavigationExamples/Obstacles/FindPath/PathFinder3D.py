@@ -10,9 +10,9 @@ from Env.CustomEnv.ThreeDNavigation.activeParticle3DEnv import ActiveParticle3DE
 
 class PathFinderThreeD:
 
-    def __init__(self, config_RBC):
+    def __init__(self, config_RBC, res = 2):
         self.config_RBC = config_RBC
-
+        self.resolution = res
         self.height, self.radius = self.config_RBC['heightRadius']
 
         self._generateRBC()
@@ -33,11 +33,11 @@ class PathFinderThreeD:
             self.obstacleCenter.append(self.obstacles[i].center)
 
     def _generateGridPoints(self):
-        numP = int(self.radius)
+        numP = int(2 * self.radius / self.resolution)
         x = np.linspace(-self.radius, self.radius, numP)
         y = np.linspace(-self.radius, self.radius, numP)
 
-        numP = int(self.height / 2 )
+        numP = int(self.height / self.resolution )
         z = np.linspace(0, self.height, numP)
         [X, Y, Z] = np.meshgrid(x, y, z)
         self.gridPoints = np.array([X.flatten(), Y.flatten(), Z.flatten()]).T
@@ -76,3 +76,15 @@ class PathFinderThreeD:
             pathCoordinates.append(self.gridPoints[self.path[i]])
 
         return pathLengthTotal, pathCoordinates
+
+    def findPath_SingleTarget(self, startPoints, endPoint):
+        dist = euclidean_distances([endPoint], self.gridPoints)
+        self.targetConfigIdx = np.argmin(dist)
+        dist = euclidean_distances(startPoints, self.gridPoints)
+        self.startConfigIdx = np.argmin(dist, axis=1)
+
+        allLength = dict(nx.single_source_bellman_ford_path_length(self.NX_G, self.targetConfigIdx))
+
+        queryLength = [allLength[i] for i in self.startConfigIdx]
+
+        return queryLength
