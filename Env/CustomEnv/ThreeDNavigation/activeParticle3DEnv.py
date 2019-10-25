@@ -458,6 +458,9 @@ class ActiveParticle3DEnv():
         targetThresh = float('inf')
         if self.targetThreshFlag:
             targetThresh = self.thresh_by_episode(self.epiCount) * 100
+            if self.obstacleFlag:
+                targetThresh = self.thresh_by_episode(self.epiCount) * max(self.wallHeight, self.wallRadius * 2)
+
             print('target thresh', targetThresh)
         self.currentState = np.array(self.config['currentState'], dtype=np.float)
         self.targetState = np.array(self.config['targetState'], dtype=np.float)
