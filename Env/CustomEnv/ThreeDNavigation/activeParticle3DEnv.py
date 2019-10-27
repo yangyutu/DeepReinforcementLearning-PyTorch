@@ -48,7 +48,7 @@ class RBCObstacle:
         Heights = abs(np.dot(distanceVec, self.orientVec))
         distance2Axis = np.linalg.norm((distanceVec - np.outer(Heights, self.orientVec)), axis = 1)
 
-        return np.logical_and(distance2Axis < (self.radius - 1.0),(Heights - self.centralHeight - distance2Axis * self.slope) < 1.0)
+        return np.logical_and(distance2Axis < (self.radius + 1.0),(Heights - self.centralHeight - distance2Axis * self.slope) < 1.0)
 
 
 class ActiveParticle3DEnv():
