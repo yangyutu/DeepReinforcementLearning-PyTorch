@@ -45,3 +45,12 @@ PyTorch implementation of classical deep reinforcement learning algorithms
 ## Third party envs
 * [[pybullet]](https://pybullet.org/wordpress/)
 
+## Cited as
+@misc{Yang2019,
+  author = {Yuguang Yang},
+  title = {DRL-Pytorch},
+  year = {2019},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/yangyutu/DeepReinforcementLearning-PyTorch}}
+}
