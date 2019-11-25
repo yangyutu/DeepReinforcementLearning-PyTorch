@@ -43,9 +43,9 @@ class Ellipsoid:
 
         self.keyPoints = keyPoints_rot + self.center
 
-    def move(self):
-        self.posMove = np.random.randn(3)
-        self.orientMove = np.random.randn(3) * 0.5
+    def move(self, translationStepSize = 1, rotationStepSize = 0.5):
+        self.posMove = np.random.randn(3) * translationStepSize
+        self.orientMove = np.random.randn(3) * rotationStepSize
 
         self.center_old = self.center.copy()
         self.orient_old = self.orient.copy()
@@ -110,9 +110,9 @@ class DynamicObstacleMover:
                     return True
         return False
 
-    def move(self, index):
+    def move(self, index, translationStepSize = 1, rotationStepSize = 0.5):
 
-        self.ellipsoids[index].move()
+        self.ellipsoids[index].move(translationStepSize, rotationStepSize)
         if not self.isInTube(index):
             self.ellipsoids[index].moveBack()
             return
@@ -128,11 +128,11 @@ class DynamicObstacleMover:
             self.env.obstacles[i].orientVec = self.ellipsoids[i].orient
             self.env.obstacleCenters[i] = self.ellipsoids[i].center
 
-    def simulate(self, steps=1):
+    def simulate(self, steps=1, translationStepSize = 1, rotationStepSize = 0.5):
         print('obs simulate')
         for i in range(steps):
             for j in range(self.numObjects):
-                self.move(j)
+                self.move(j, translationStepSize, rotationStepSize)
 
         self.resetEnvObstacles()
 
