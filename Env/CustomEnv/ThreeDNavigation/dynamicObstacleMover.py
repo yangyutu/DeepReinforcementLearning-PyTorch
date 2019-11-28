@@ -1,16 +1,4 @@
-from Agents.DDPG.DDPG import DDPGAgent
-import json
-from torch import optim
-from copy import deepcopy
-from Env.CustomEnv.StablizerOneD import StablizerOneD
-import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
-import matplotlib.pyplot as plt
-import torch
-from utils.OUNoise import OUNoise
-from activeParticleEnv import ActiveParticleEnvMultiMap, ActiveParticleEnv
-from Env.CustomEnv.ThreeDNavigation.activeParticle3DEnv import ActiveParticle3DEnv, RBCObstacle
 from sklearn.metrics.pairwise import euclidean_distances
 import math
 
@@ -111,6 +99,11 @@ class DynamicObstacleMover:
         return False
 
     def move(self, index, translationStepSize = 1, rotationStepSize = 0.5):
+
+        robotCenter = self.env.currentState[0:3]
+        dist = np.linalg.norm(robotCenter - self.ellipsoids[index].center)
+        if dist < 4:
+            return
 
         self.ellipsoids[index].move(translationStepSize, rotationStepSize)
         if not self.isInTube(index):

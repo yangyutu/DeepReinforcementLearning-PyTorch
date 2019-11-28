@@ -29,10 +29,10 @@ material('dull');
     view([39 15]);
     camlight('left')
     
-plotCurvedVesselFunc(500, 50)
+plotCurvedVesselFunc(500, 5)
 view(3)
-ylim([-100, 100])
-xlim([-100, 100])
+ylim([-50, 50])
+xlim([-50, 50])
 pbaspect([1, 2, 10])
 
 axis on

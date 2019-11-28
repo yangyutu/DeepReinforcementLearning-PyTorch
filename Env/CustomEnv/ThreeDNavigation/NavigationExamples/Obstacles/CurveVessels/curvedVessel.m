@@ -3,7 +3,7 @@ close all
 
 z_c = linspace(0, 500, 200);
 k1 = 0.05;
-R1 = 10;
+R1 = 15;
 R0 = 10;
 k2 = 0.02;
 midRadius = 25;
@@ -32,9 +32,9 @@ figure(1)
 X = XC + R .* cos(Theta);
 Y = YC + R .* sin(Theta);
 scatter3(ZC, X, Y, 2, [0.8, 0.8, 0.8],'filled')
-pbaspect([10,1, 1])
-ylim([-100, 100])
-zlim([-100, 100])
+pbaspect([5 ,1, 1])
+ylim([-50, 50])
+zlim([-50, 50])
 hold on
 plot3(z_c, x_c, y_c);
 
@@ -47,6 +47,6 @@ figure(5)
 [TRI,v]= surf2patch(X,Y,Z,'triangle'); 
 patch('Vertices',v,'Faces',TRI,'facecolor',[1 0 0 ],'facealpha',0.2, 'EdgeColor',       'none');
 view(3)
-pbaspect([1,1, 10])
-ylim([-100, 100])
-xlim([-100, 100])
+pbaspect([1,1, 5])
+ylim([-50, 50])
+xlim([-50, 50])

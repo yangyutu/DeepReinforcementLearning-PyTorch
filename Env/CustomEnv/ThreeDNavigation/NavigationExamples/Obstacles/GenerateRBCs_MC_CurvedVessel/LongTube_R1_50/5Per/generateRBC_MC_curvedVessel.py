@@ -9,7 +9,7 @@ height = 500
 radius = 50
 thresh = 0.5
 numObs = 50
-R1 = 50
+R1 = 5
 obsCount = 0
 np.random.seed(2)
 random.seed(2)
@@ -86,9 +86,9 @@ class MonteCarloSimulation:
         self.radius = 4.0
 
     def generateInitialConfig(self):
-        x = np.arange(-R1 + 8.5, R1 - 8.5, 18.5)
-        y = np.arange(-R1 + 8.5, R1 - 8.5, 18.5)
-        z = np.arange(3, height - 3, 8)
+        x = np.arange(-radius*2 + 8.5, radius*2 - 8.5, 18.5)
+        y = np.arange(-radius*2 + 8.5, radius*2 - 8.5, 18.5)
+        z = np.arange(3, height - 3, 15)
         [X, Y, Z] = np.meshgrid(x, y, z)
         candidateCenters = np.array([X.flatten(), Y.flatten(), Z.flatten()], dtype=np.float32).T
 
@@ -147,12 +147,12 @@ MC.generateInitialConfig()
 vol = 0
 for i in range(MC.numObjects):
     vol += MC.ellipsoids[i].volume
-
+totalVol = 1.0271e6
 print(vol)
-print(np.pi * radius**2 * height)
-print(vol/(np.pi * radius**2 * height))
+print(totalVol)
+print(vol/(totalVol))
 
-MC.simulate(100)
+MC.simulate(500)
 MC.output()
 
 

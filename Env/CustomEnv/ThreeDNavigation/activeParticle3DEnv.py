@@ -52,12 +52,13 @@ class RBCObstacle:
 
 
 class ActiveParticle3DEnv():
-    def __init__(self, configName, randomSeed = 1, obstacleConstructorCallBack = None):
+    def __init__(self, configName, randomSeed = 1, obstacleConstructorCallBack = None, curvedVessel = None):
 
         with open(configName) as f:
             self.config = json.load(f)
         self.randomSeed = randomSeed
         self.obstacleConstructorCallBack = obstacleConstructorCallBack
+        self.curvedVessel = curvedVessel
         self.model = ActiveParticle3DSimulatorPython(configName, randomSeed)
         self.read_config()
         self.initilize()
@@ -195,6 +196,10 @@ class ActiveParticle3DEnv():
                     raise Exception("particle type vanilla does not support orientControl")
                 self.nbActions = 3
 
+        self.vesselCapFlag = True
+        if 'vesselCapFlag' in self.config:
+            self.vesselCapFlag = self.config['vesselCapFlag']
+
 
     def thresh_by_episode(self, step):
         return self.endThresh + (
@@ -320,11 +325,19 @@ class ActiveParticle3DEnv():
 
         distance2Axis = np.linalg.norm(points, axis = 1)
 
-        return np.logical_or(distance2Axis > self.wallRadius, np.logical_or(points[:,2] < 0.0, points[:,2] > self.wallHeight))
-
+        if self.curvedVessel is None:
+            if self.vesselCapFlag:
+                return np.logical_or(distance2Axis > self.wallRadius, np.logical_or(points[:,2] < 0.0, points[:,2] > self.wallHeight))
+            else:
+                return distance2Axis > self.wallRadius
+        else:
+            return self.curvedVessel.isOutsideVec(points)
 
     def inObstacle(self, point):
         if self.obstacleFlag:
+
+
+
             pDist = euclidean_distances([point], self.obstacleCenters)
 
             for idx, dist in enumerate(pDist[0]):
@@ -335,12 +348,15 @@ class ActiveParticle3DEnv():
                         return True
 
             # check if outside the wall
-            r = math.sqrt((point[0])**2 + (point[1])**2)
-            if r > (self.wallRadius - 1.0):
-                return True
+            if self.curvedVessel is not None:
+                return self.curvedVessel.isOutside(point)
+            else:
+                r = math.sqrt((point[0])**2 + (point[1])**2)
+                if r > (self.wallRadius - 1.0):
+                    return True
 
-            if point[2] > self.wallHeight or point[2] < 0.0:
-                return True
+                if point[2] > self.wallHeight or point[2] < 0.0:
+                    return True
 
         return False
 
