@@ -73,6 +73,43 @@ class PathGuiderStraightLine:
         self.t = t
         self.updateTrajPos()
 
+class PathGuiderStraightLineReverse:
+    def __init__(self, height):
+
+        self.height = height
+        self.k = 5
+        self.dt = 0.1
+
+        self.t = 0.0
+        self.updateTrajPos()
+
+    def updateTrajPos(self):
+        self.z = self.height - self.k * self.t
+        self.x = 0
+        self.y = 0
+        self.trajPos = np.array([self.x, self.y, self.z])
+
+    def getTrajPos(self):
+        return self.trajPos.copy()
+
+    def step(self, pos, thresh):
+
+        dist = self.trajPos - pos
+        distance = np.linalg.norm(dist)
+
+        while distance < thresh:
+            self.t += self.dt
+            self.updateTrajPos()
+            dist = self.trajPos - pos
+            distance = np.linalg.norm(dist)
+    def reset(self):
+        self.t = 0.0
+        self.updateTrajPos()
+
+    def set_t(self, t):
+        self.t = t
+        self.updateTrajPos()
+
 class PathGuiderCurvedVessel:
     def __init__(self, k1 = 0.05, k2 = 0.02, R0 = 10, R1 = 10, midRadius = 25, length = 500, capFlag = True):
         self.k1 = k1

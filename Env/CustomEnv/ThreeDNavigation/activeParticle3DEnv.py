@@ -1,4 +1,7 @@
 from Env.CustomEnv.ThreeDNavigation.ActiveParticle3DSimulatorPython import ActiveParticle3DSimulatorPython
+from Env.CustomEnv.ThreeDNavigation.dynamicObstacleMover import Ellipsoid
+from Env.CustomEnv.ThreeDNavigation.NavigationExamples.Obstacles.CurveVessels.curvedVessel import CurvedVessel
+
 import numpy as np
 import random
 import json
@@ -14,18 +17,6 @@ from scipy.spatial import distance
 # given G = 5kT/a, every second the displacement is 5 D/a and is 5 D/a^2 in radius,
 # which is around 0.1 a per s(D = 2.145 e-14)
 # if G = 50, then it is 1a per s
-
-# a dummy test env
-class ActiveParticle3DSimulatorPythonDummy:
-    def __init__(self, configName, randomSeed):
-        self.currentState = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
-
-    def getLocalFrame(self):
-        return np.array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
-
-    def createInitialState(self, x, y, z, ori0, ori1, ori2):
-        self.currentState = np.array([x, y, z, ori0, ori1, ori2])
-
 
 class RBCObstacle:
 
@@ -188,6 +179,7 @@ class ActiveParticle3DEnv():
         if 'localFrameFlag' in self.config:
             self.localFrameFlag = self.config['localFrameFlag']
 
+        # orient control will provide orientation vector to be aligned
         self.orientControlFlag = False
         if 'orientControlFlag' in self.config:
             self.orientControlFlag = self.config['orientControlFlag']
@@ -199,6 +191,14 @@ class ActiveParticle3DEnv():
         self.vesselCapFlag = True
         if 'vesselCapFlag' in self.config:
             self.vesselCapFlag = self.config['vesselCapFlag']
+
+
+        self.RBCInitialMoveFlag = False
+        if 'RBCInitialMoveFlag' in self.config:
+            self.RBCInitialMoveFlag = self.config['RBCInitialMoveFlag']
+            self.RBCInitialMoveSteps = self.config['RBCInitialMoveSteps']
+            self.RBCInitialMoveFreq = self.config['RBCInitialMoveFreq']
+
 
 
     def thresh_by_episode(self, step):
@@ -335,8 +335,6 @@ class ActiveParticle3DEnv():
 
     def inObstacle(self, point):
         if self.obstacleFlag:
-
-
 
             pDist = euclidean_distances([point], self.obstacleCenters)
 
@@ -545,12 +543,22 @@ class ActiveParticle3DEnv():
         index = np.random.choice(self.numMaps, 1, p=self.multiMapProbs)[0]
         self.obstacles, self.obstacleCenters = self.obstaclesList[index], self.obstaclesCentersList[index]
         self.wallHeight, self.wallRadius = self.wallHeights[index], self.wallRadii[index]
+
+        if self.multiMapNames[index] in self.config:
+            self.curvedVessel = CurvedVessel(**self.config[self.multiMapNames[index]])
+            print('construct curved vessels', self.multiMapNames[index])
+        else:
+            self.curvedVessel = None
+
         print('reset map', self.multiMapNames[index], self.wallHeight, self.wallRadius)
+
+        if self.RBCInitialMoveFlag and self.epiCount % self.RBCInitialMoveFreq == 0:
+            self.RBCConstructAndMove(self.RBCInitialMoveSteps)
 
 
     def reset(self):
         self.stepCount = 0
-
+        self.epiCount += 1
         if self.timingFlag:
             self.stepCount = self.generateTimeStep()
 
@@ -565,7 +573,7 @@ class ActiveParticle3DEnv():
         self.info['timeStep'] = self.stepCount
         self.info['trapCount'] = 0
         self.info['trapConfig'] = []
-        self.epiCount += 1
+
 
 
         self.reset_helper()
@@ -610,6 +618,52 @@ class ActiveParticle3DEnv():
             else:
                 state = np.concatenate((self.currentState[3:], distance / self.distanceScale, [float(self.stepCount) / self.timeScale]))
         return state
+
+    def checkRBCOverlap(self, index):
+
+        dist = euclidean_distances([self.RBCCenters[index]], self.RBCCenters)
+        dist[dist == 0] = 100
+        thresh = 2.0
+        for i in range(dist.shape[1]):
+            if dist[0, i] < 20: # typical RBC diameter
+                dist = euclidean_distances(self.ellipsoids[index].keyPoints, self.ellipsoids[i].keyPoints)
+                dist[dist == 0] = 100
+                if np.any(dist < thresh):
+                    return True
+        return False
+
+
+    def RBCMove(self, index, translationStepSize=1, rotationStepSize=0.5):
+
+        self.ellipsoids[index].move(translationStepSize, rotationStepSize)
+        if np.any(self.outsideWall(self.ellipsoids[index].keyPoints)):
+            self.ellipsoids[index].moveBack()
+            return
+        self.RBCCenters[index] = self.ellipsoids[index].center
+        if self.checkRBCOverlap(index):
+            self.ellipsoids[index].moveBack()
+            self.RBCCenters[index] = self.ellipsoids[index].center
+
+    def RBCConstructAndMove(self, steps):
+
+        self.ellipsoids = []
+        self.RBCCenters = []
+        for obs in self.obstacles:
+            self.ellipsoids.append(Ellipsoid(obs.center, obs.scale, obs.orientVec))
+            self.RBCCenters.append(obs.center)
+
+        print('obs simulate')
+        for i in range(steps):
+            for j in range(len(self.ellipsoids)):
+                self.RBCMove(j)
+
+        # set the obstacle centers
+        for i in range(len(self.ellipsoids)):
+            self.obstacles[i].center = self.ellipsoids[i].center
+            self.obstacles[i].orientVec = self.ellipsoids[i].orient
+            self.obstacleCenters[i] = self.ellipsoids[i].center
+
+
 
     def initObsMat(self):
         return
