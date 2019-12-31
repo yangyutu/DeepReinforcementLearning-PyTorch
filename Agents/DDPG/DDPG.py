@@ -185,7 +185,7 @@ class DDPGAgent:
         else:
             state = torch.tensor(transitions.state, device=self.device, dtype=torch.float32)
             nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)), device=self.device,
-                                        dtype=torch.uint8)
+                                        dtype=torch.bool)
             nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None], device=self.device,
                                              dtype=torch.float32)
 
