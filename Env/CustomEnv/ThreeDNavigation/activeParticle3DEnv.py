@@ -75,8 +75,12 @@ class ActiveParticle3DEnv():
 
     def read_config(self):
 
-        self.receptHalfWidth = self.config['receptHalfWidth']
-        self.padding = self.config['obstacleMapPaddingWidth']
+        self.receptHalfWidth = 5
+        if 'receptHalfWidth' in self.config:
+            self.receptHalfWidth = self.config['receptHalfWidth']
+        self.padding = 10
+        if 'obstacleMapPaddingWidth' in self.config:
+            self.padding = self.config['obstacleMapPaddingWidth']
 
         self.sensorPixelSize = 2
         if 'sensorPixelSize' in self.config:
@@ -322,8 +326,8 @@ class ActiveParticle3DEnv():
         return -self.actionPenalty * actionNorm ** 2
 
     def outsideWall(self, points):
-
-        distance2Axis = np.linalg.norm(points, axis = 1)
+        # use xy to calculate axis
+        distance2Axis = np.linalg.norm(points[:,0:2], axis=1)
 
         if self.curvedVessel is None:
             if self.vesselCapFlag:
