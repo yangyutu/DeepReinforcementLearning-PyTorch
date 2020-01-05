@@ -19,10 +19,6 @@ class BaseDQNAgent(object):
             stateProcessor: a function to process output from env, processed state will be used as input to the networks
             experienceProcessor: additional steps to process an experience
         """
-
-
-
-
     def __init__(self, config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None, experienceProcessor=None):
         self.config = config
         self.read_config()

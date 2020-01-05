@@ -4,6 +4,16 @@ import torch.nn.functional as F
 from utils.netInit import xavier_init
 
 class DuelingMLP(nn.Module):
+    """An example dueling network for Q learning
+        see 'Dueling Network Architectures for Deep Reinforcement Learning'
+        # Argument
+        n_feature: dimensionality of input feature
+        n_hidden: a list of hidden units
+        n_output: dimensionality of output feature
+        dueling_size: the hidden unit for advantage function and value function
+        """
+
+
     def __init__(self, n_feature, n_hidden, n_output, dueling_size):
         super(DuelingMLP, self).__init__()
         if len(n_hidden) < 1:
@@ -37,5 +47,5 @@ class DuelingMLP(nn.Module):
 
         val = F.relu(self.valLayer1(x))
         val = self.valLayer2(val)
-
+        # here the subtraction of mean is to address the identification issue. See the original reference.
         return val + adv - adv.mean()

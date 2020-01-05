@@ -1,7 +1,7 @@
 import random
 
 from collections import namedtuple
-# Define a namedtuple with name Transition and attributes of state, action, next_state, reward
+# Define a namedtuple with name ExtendedTransition and attributes of state, action, next_state, reward, done
 ExtendedTransition = namedtuple('ExtendedTransition',
                         ('state', 'action', 'next_state', 'reward', 'done'))
 

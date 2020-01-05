@@ -4,6 +4,12 @@ from utils.netInit import xavier_init
 import numpy as np
 
 class MultiLayerNetRegression(torch.nn.Module):
+    """An example MLP network for Q learning. Such network can be used in a typical deep Q learning
+        # Argument
+        n_feature: dimensionality of input feature
+        n_hidden: a list of hidden units
+        n_output: dimensionality of output feature
+        """
     def __init__(self, n_feature, n_hidden, n_output):
         super(MultiLayerNetRegression, self).__init__()
         if len(n_hidden) < 1:
@@ -28,6 +34,13 @@ class MultiLayerNetRegression(torch.nn.Module):
         return out
 
 class MultiLayerNetLogSoftmax(torch.nn.Module):
+    """An example MLP network for Q learning. Note that log softmax will apply to the last layer.
+        Such network can be used as an actor network in a typical actor-critic learning
+        # Argument
+        n_feature: dimensionality of input feature
+        n_hidden: a list of hidden units
+        n_output: dimensionality of output feature
+        """
     def __init__(self, n_feature, n_hidden, n_output):
         super(MultiLayerNetLogSoftmax, self).__init__()
         if len(n_hidden) < 1:
@@ -50,9 +63,13 @@ class MultiLayerNetLogSoftmax(torch.nn.Module):
         out = F.log_softmax(self.predict(x), dim=1)
         return out
 
-
-
 class MultiLayerNetActorCritic(torch.nn.Module):
+    """An example MLP network for actor-critic learning. Note that the network outputs both action and value
+        # Argument
+        n_feature: dimensionality of input feature
+        n_hidden: a list of hidden units
+        n_output: dimensionality of output feature
+        """
     def __init__(self, n_feature, n_hidden, n_output):
         super(MultiLayerNetActorCritic, self).__init__()
         if len(n_hidden) < 1:
@@ -80,6 +97,12 @@ class MultiLayerNetActorCritic(torch.nn.Module):
 
 
 class MultiLayerNetRegressionWithGRU(torch.nn.Module):
+    """An example MLP network for deep Q learning for recurrent units. Note that the network outputs both action and value
+        # Argument
+        n_feature: dimensionality of input feature
+        n_hidden: a list of hidden units
+        n_output: dimensionality of output feature
+        """
     def __init__(self, n_feature, n_hidden, n_output, gru_size=32, device = None):
         super(MultiLayerNetRegressionWithGRU, self).__init__()
 

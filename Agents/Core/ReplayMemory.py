@@ -10,7 +10,10 @@ Transition = namedtuple('Transition',
 
 
 class ReplayMemory(object):
-
+    """class to store experience and sample minibatch experience for training
+        # Argument
+        capacity: number of experiences to store. Depending on the complexicity of problem, typical capacity ranges from 1k to 1M.
+        """
     def __init__(self, capacity):
         self.capacity = capacity
         self.memory = []
@@ -30,6 +33,7 @@ class ReplayMemory(object):
         self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):
+        # sample of minibatch of experiences
         return random.sample(self.memory, batch_size)
 
     def fetch_all(self):

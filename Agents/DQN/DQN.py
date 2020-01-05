@@ -7,23 +7,28 @@ import random
 import torch
 import torch.optim
 import numpy as np
-from enum import Enum
 import simplejson as json
-import os
-import math
 import pickle
 
-class NumpyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return json.JSONEncoder.default(self, obj)
 
 class DQNAgent(BaseDQNAgent):
-
+    """class for DQN  agents.
+        This class contains implementation of DQN learning with various enhancement: double Q,
+        prioritized experience replay, hindsight experience replay, etc.
+        # Arguments
+            config: a dictionary for training parameters
+            policyNet: neural network for Q learning
+            targetNet: a slowly changing policyNet to provide Q value targets
+            env: environment for the agent to interact. env should implement same interface of a gym env
+            optimizer: a network optimizer
+            netLossFunc: loss function of the network, e.g., mse
+            nbAction: number of actions
+            stateProcessor: a function to process output from env, processed state will be used as input to the networks
+            experienceProcessor: additional steps to process an experience
+        """
     def __init__(self, config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None, experienceProcessor=None):
         super(DQNAgent, self).__init__(config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor, experienceProcessor)
-
+        # initialize memory units
         self.init_memory()
 
 
@@ -32,6 +37,7 @@ class DQNAgent(BaseDQNAgent):
         if self.priorityMemoryOption:
             self.memory = PrioritizedReplayMemory(self.memoryCapacity, self.config)
         else:
+            # most commonly experience replay memory
             if self.memoryOption == 'natural':
                 self.memory = ReplayMemory(self.memoryCapacity)
             elif self.memoryOption == 'reward':
@@ -39,6 +45,14 @@ class DQNAgent(BaseDQNAgent):
                                                  self.gamma, self.config['rewardMemoryTerminalRatio'] )
 
     def read_config(self):
+        '''
+        reading additional configurations
+        memoryCapacity, memoryOption
+        priorityMemoryOption
+
+        '''
+        #
+
         super(DQNAgent, self).read_config()
         # read additional parameters
         self.memoryCapacity = self.config['memoryCapacity']
@@ -54,10 +68,20 @@ class DQNAgent(BaseDQNAgent):
                 self.nStepForward = 1
 
     def work_At_Episode_Begin(self):
+        '''
+        stuff to do before each episode
+
+        :return:
+        '''
         # clear the nstep buffer
         self.nStepBuffer.clear()
 
     def work_before_step(self, state=None):
+        '''
+        stuff to do before each step
+        :param state:
+        :return:
+        '''
         self.epsThreshold = self.epsilon_by_step(self.globalStepCount)
 
     def train_one_episode(self):
@@ -86,7 +110,7 @@ class DQNAgent(BaseDQNAgent):
             if done:
                 nextState = None
 
-            # learn the transition
+            # store, augment, learn the transition
             self.update_net(state, action, nextState, reward, info)
 
             state = nextState
@@ -129,7 +153,9 @@ class DQNAgent(BaseDQNAgent):
         self.save_all()
 
     def store_experience(self, state, action, nextState, reward, info):
-
+        '''
+        store experience tuple (state, action, nextState, reward)
+        '''
         if self.experienceProcessor is not None:
             state, action, nextState, reward = self.experienceProcessor(state, action, nextState, reward, info)
         # caution: using multiple step forward return can increase variance
@@ -182,8 +208,10 @@ class DQNAgent(BaseDQNAgent):
 
 
     def update_net(self, state, action, nextState, reward, info):
+        '''
+        This routine will store, transform, augment experiences and sample experiences for gradient descent.
+        '''
 
-        # first store memory
 
         self.store_experience(state, action, nextState, reward, info)
 
@@ -224,12 +252,17 @@ class DQNAgent(BaseDQNAgent):
                 self.learnStepCounter += 1
 
     def prepare_minibatch(self, transitions_raw):
-        # first store memory
+        '''
+        do some proprocessing work for transitions_raw
+        order the data
+        convert transition list to torch tensors
+        use trick from https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+        https://stackoverflow.com/questions/19339/transpose-unzip-function-inverse-of-zip/19343#19343
+        '''
 
         transitions = Transition(*zip(*transitions_raw))
         action = torch.tensor(transitions.action, device=self.device, dtype=torch.long).unsqueeze(-1)  # shape(batch, 1)
-        reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32).unsqueeze(
-            -1)  # shape(batch, 1)
+        reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32).unsqueeze(-1)  # shape(batch, 1)
 
         # for some env, the output state requires further processing before feeding to neural network
         if self.stateProcessor is not None:
@@ -245,11 +278,9 @@ class DQNAgent(BaseDQNAgent):
         return state, nonFinalMask, nonFinalNextState, action, reward
 
     def update_net_on_transitions(self, transitions_raw, loss_fun, gradientStep = 1, updateOption='policyNet', netGradClip=None, info=None):
-
-        # order the data
-        # convert transition list to torch tensors
-        # use trick from https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
-        # https://stackoverflow.com/questions/19339/transpose-unzip-function-inverse-of-zip/19343#19343
+        '''
+        This function performs gradient gradient on the network
+        '''
 
         state, nonFinalMask, nonFinalNextState, action, reward = self.prepare_minibatch(transitions_raw)
 
