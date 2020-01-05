@@ -6,6 +6,22 @@ import numpy as np
 import math
 
 class BaseDQNAgent(object):
+    """Abstract base class for DQN based agents.
+        This base class contains common routines to perform basic initialization, action selection, and logging
+        # Arguments
+            config: a dictionary for training parameters
+            policyNet: neural network for Q learning
+            targetNet: a slowly changing policyNet to provide Q value targets
+            env: environment for the agent to interact. env should implement same interface of a gym env
+            optimizer: a network optimizer
+            netLossFunc: loss function of the network, e.g., mse
+            nbAction: number of actions
+            stateProcessor: a function to process output from env, processed state will be used as input to the networks
+            experienceProcessor: additional steps to process an experience
+        """
+
+
+
 
     def __init__(self, config, policyNet, targetNet, env, optimizer, netLossFunc, nbAction, stateProcessor = None, experienceProcessor=None):
         self.config = config
@@ -44,7 +60,35 @@ class BaseDQNAgent(object):
         self.runningAvgEpisodeReward = 0.0
 
     def read_config(self):
+        '''
+        read parameters from self.config object
+        initialize various flags
+        trainStep: number of episodes to train
+        targetNetUpdateStep: frequency in terms of training steps/episodes to reset target net
+        trainBatchSize: mini batch size for gradient decent.
+        gamma: discount factor
+        netGradClip: gradient clipping parameter
+        netUpdateOption: allowed strings are targetNet, policyNet, doubleQ
+        verbose: bool, default false.
+        nStepForward: multiple-step forward Q learning, default 1
+        lossRecordStep: frequency to store loss.
+        episodeLength: maximum steps in an episode
+        netUpdateFrequency: frequency to perform gradient decent
+        netUpdateStep: number of steps for gradient decent
+        epsThreshold: const epsilon used throughout the training. Will be overridden by epsilon start, epsilon end, epsilon decay
+        epsilon_start: start epsilon for scheduled epsilon exponential decay
+        epsilon_final: end epsilon for scheduled epsilon exponential decay
+        epsilon_decay: factor for exponential decay of epsilon
+        device: cpu or cuda
+        randomSeed
+        hindSightER: bool variable for hindsight experience replay
+        hindSightERFreq: frequency to perform hindsight experience replay
+        return: None
+        '''
+
+
         self.trainStep = self.config['trainStep']
+
         self.targetNetUpdateStep = 10000
         if 'targetNetUpdateStep' in self.config:
             self.targetNetUpdateStep = self.config['targetNetUpdateStep']
@@ -58,6 +102,9 @@ class BaseDQNAgent(object):
         self.netUpdateOption = 'targetNet'
         if 'netUpdateOption' in self.config:
             self.netUpdateOption = self.config['netUpdateOption']
+        if self.netUpdateOption not in ['targetNet', 'policyNet', 'doubleQ']:
+            raise Exception('netUpdateOption is invalid')
+
         self.verbose = False
         if 'verbose' in self.config:
             self.verbose = self.config['verbose']
@@ -117,7 +164,16 @@ class BaseDQNAgent(object):
             self.netUpdateStep = self.config['netUpdateStep']
 
     def select_action(self, net=None, state=None, epsThreshold=None, noiseFlag = True):
+        '''
+        select action based on epsilon rule
+        # Arguments
+        net: which net used for action selection. default is policyNet
+        state: observation or state as the input to the net
+        epsThreshold: epsilon to used
+        noiseFlag: if set False, will ignore epsilon and perform greedy selection.
 
+        return: integer index with base 0
+        '''
         if net is None:
             net = self.policyNet
         if epsThreshold is None:
@@ -142,7 +198,7 @@ class BaseDQNAgent(object):
         return action
 
     def getPolicy(self, state):
-        return self.select_action(self.policyNet, state, -0.01)
+        return self.select_action(net=self.policyNet, state=state, noiseFlag=False)
 
     def train(self):
         raise NotImplementedError
