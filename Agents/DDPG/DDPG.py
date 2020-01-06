@@ -5,6 +5,19 @@ from Agents.Core.ReplayMemory import ReplayMemory, Transition
 
 import pickle
 class DDPGAgent:
+    """class for DDPG agents.
+        This class contains implementation of DDPG learning.
+        # Arguments
+            config: a dictionary for training parameters
+            actors: actor net and its target net
+            criticNets: critic net and its target net
+            env: environment for the agent to interact. env should implement same interface of a gym env
+            optimizers: network optimizers for both actor net and critic
+            netLossFunc: loss function of the network, e.g., mse
+            nbAction: number of actions
+            stateProcessor: a function to process output from env, processed state will be used as input to the networks
+            experienceProcessor: additional steps to process an experience
+        """
     def __init__(self, config, actorNets, criticNets, env, optimizers, netLossFunc, nbAction, stateProcessor = None, experienceProcessor = None):
 
         self.config = config
@@ -22,6 +35,9 @@ class DDPGAgent:
 
 
     def initalizeNets(self, actorNets, criticNets, optimizers):
+        '''
+        initialize networks and their optimizers; move them to specified device (i.e., cpu or cuda)
+        '''
         self.actorNet = actorNets['actor']
         self.actorNet_target = actorNets['target'] if 'target' in actorNets else None
         self.criticNet = criticNets['critic']
@@ -32,9 +48,38 @@ class DDPGAgent:
         self.net_to_device()
 
     def init_memory(self):
+        '''
+        initialize replay memory
+        '''
         self.memory = ReplayMemory(self.memoryCapacity)
 
     def read_config(self):
+        '''
+        read parameters from self.config object
+        initialize various flags and parameters
+        trainStep: number of episodes to train
+        targetNetUpdateStep: frequency in terms of training steps/episodes to reset target net
+        trainBatchSize: mini batch size for gradient decent.
+        gamma: discount factor
+        tau: soft update parameter
+        netGradClip: gradient clipping parameter
+        netUpdateOption: allowed strings are targetNet, policyNet, doubleQ
+        verbose: bool, default false.
+        nStepForward: multiple-step forward Q learning, default 1
+        lossRecordStep: frequency to store loss.
+        episodeLength: maximum steps in an episode
+        netUpdateFrequency: frequency to perform gradient decent
+        netUpdateStep: number of steps for gradient decent
+        epsThreshold: const epsilon used throughout the training. Will be overridden by epsilon start, epsilon end, epsilon decay
+        epsilon_start: start epsilon for scheduled epsilon exponential decay
+        epsilon_final: end epsilon for scheduled epsilon exponential decay
+        epsilon_decay: factor for exponential decay of epsilon
+        device: cpu or cuda
+        randomSeed
+        hindSightER: bool variable for hindsight experience replay
+        hindSightERFreq: frequency to perform hindsight experience replay
+        return: None
+        '''
         self.trainStep = self.config['trainStep']
         self.targetNetUpdateStep = 10000
         if 'targetNetUpdateStep' in self.config:
@@ -97,7 +142,10 @@ class DDPGAgent:
             self.policyUpdateFreq = self.config['policyUpdateFreq']
 
     def net_to_device(self):
-        # move model to correct device
+        '''
+         move model to the specified devices
+        '''
+
         self.actorNet = self.actorNet.to(self.device)
         self.criticNet = self.criticNet.to(self.device)
 

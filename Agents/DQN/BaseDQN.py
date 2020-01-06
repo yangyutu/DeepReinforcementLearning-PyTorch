@@ -58,7 +58,7 @@ class BaseDQNAgent(object):
     def read_config(self):
         '''
         read parameters from self.config object
-        initialize various flags
+        initialize various flags and parameters
         trainStep: number of episodes to train
         targetNetUpdateStep: frequency in terms of training steps/episodes to reset target net
         trainBatchSize: mini batch size for gradient decent.
