@@ -6,7 +6,7 @@ from Agents.Core.ReplayMemory import ReplayMemory, Transition
 import pickle
 class DDPGAgent:
     """class for DDPG agents.
-        This class contains implementation of DDPG learning.
+        This class contains implementation of DDPG learning. It contains enhancement of experience augmentation, hindsight experience replay.
         # Arguments
             config: a dictionary for training parameters
             actors: actor net and its target net
@@ -62,6 +62,7 @@ class DDPGAgent:
         trainBatchSize: mini batch size for gradient decent.
         gamma: discount factor
         tau: soft update parameter
+        memoryCapacity: memory capacity for experience storage
         netGradClip: gradient clipping parameter
         netUpdateOption: allowed strings are targetNet, policyNet, doubleQ
         verbose: bool, default false.
@@ -70,14 +71,11 @@ class DDPGAgent:
         episodeLength: maximum steps in an episode
         netUpdateFrequency: frequency to perform gradient decent
         netUpdateStep: number of steps for gradient decent
-        epsThreshold: const epsilon used throughout the training. Will be overridden by epsilon start, epsilon end, epsilon decay
-        epsilon_start: start epsilon for scheduled epsilon exponential decay
-        epsilon_final: end epsilon for scheduled epsilon exponential decay
-        epsilon_decay: factor for exponential decay of epsilon
         device: cpu or cuda
         randomSeed
         hindSightER: bool variable for hindsight experience replay
         hindSightERFreq: frequency to perform hindsight experience replay
+        experienceAugmentation: additional experience augmentation function
         return: None
         '''
         self.trainStep = self.config['trainStep']
@@ -174,6 +172,16 @@ class DDPGAgent:
         self.runningAvgEpisodeReward = 0.0
 
     def select_action(self, net=None, state=None, noiseFlag = False):
+        '''
+        select action from net. The action selection is delegated to network to implement the method of 'select_action'
+        # Arguments
+        net: which net used for action selection. default is actorNet
+        state: observation or state as the input to the net
+        noiseFlag: if set False, will perform greedy selection. if True, will add noise from OU processes.
+        return: numpy array of actions
+        '''
+
+
         if net is None:
             net = self.actorNet
 
@@ -220,7 +228,13 @@ class DDPGAgent:
 
 
     def prepare_minibatch(self, transitions_raw):
-        # first store memory
+        '''
+        do some proprocessing work for transitions_raw
+        order the data
+        convert transition list to torch tensors
+        use trick from https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+        https://stackoverflow.com/questions/19339/transpose-unzip-function-inverse-of-zip/19343#19343
+        '''
 
         transitions = Transition(*zip(*transitions_raw))
         action = torch.tensor(transitions.action, device=self.device, dtype=torch.float32)  # shape(batch, numActions)
@@ -240,8 +254,9 @@ class DDPGAgent:
         return state, nonFinalMask, nonFinalNextState, action, reward
 
     def update_net(self, state, action, nextState, reward, info):
-
-        # first store memory
+        '''
+        This routine will store, transform, augment experiences and sample experiences for gradient descent.
+        '''
 
         self.store_experience(state, action, nextState, reward, info)
 
@@ -258,6 +273,9 @@ class DDPGAgent:
         self.learnStepCounter += 1
 
     def copy_nets(self):
+        '''
+        soft update target networks
+        '''
         # update networks
         if self.learnStepCounter % self.policyUpdateFreq == 0:
             # update target networks
@@ -268,7 +286,9 @@ class DDPGAgent:
                 target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
     def update_net_on_transitions(self, transitions_raw):
-
+        '''
+        This function performs gradient gradient on the network
+        '''
         state, nonFinalMask, nonFinalNextState, action, reward = self.prepare_minibatch(transitions_raw)
 
         # Critic loss

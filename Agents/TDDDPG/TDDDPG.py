@@ -7,6 +7,23 @@ import pickle
 
 
 class TDDDPGAgent(DDPGAgent):
+    """class for TD3 agents.
+            This class contains implementation of TD3 learning. It is derived from DDPG.
+            TD3 aims to address the value function overestimation in DDPG through three techniques.
+            1) use two Q nets to enable underestimation bias
+            2) add target action smoothing to reduce the exploitation of value funciton spikes
+            3) update actor net less frequently.
+            # Arguments
+                config: a dictionary for training parameters
+                actors: actor net and its target net
+                criticNets: Q net and its target net. Similar to TD3, will have two Q networks
+                env: environment for the agent to interact. env should implement same interface of a gym env
+                optimizers: network optimizers for both actor net and critic
+                netLossFunc: loss function of the network, e.g., mse
+                nbAction: number of actions
+                stateProcessor: a function to process output from env, processed state will be used as input to the networks
+                experienceProcessor: additional steps to process an experience
+    """
     def __init__(self, config, actorNets, criticNets, env, optimizers, netLossFunc, nbAction, stateProcessor=None, experienceProcessor = None):
 
         super(TDDDPGAgent, self).__init__(config, actorNets, criticNets, env, optimizers, netLossFunc, nbAction,
@@ -32,6 +49,10 @@ class TDDDPGAgent(DDPGAgent):
 
     def read_config(self):
         super(TDDDPGAgent, self).read_config()
+        ''''
+        Introduce arguments to control actor net update frequency and policy smooth noise
+        '''
+
 
         self.policyUpdateFreq = 2
         if 'policyUpdateFreq' in self.config:
@@ -55,53 +76,26 @@ class TDDDPGAgent(DDPGAgent):
         if self.criticNet_targetTwo is not None:
             self.criticNet_targetTwo = self.criticNet_targetTwo.to(self.device)
 
-    def prepare_minibatch(self, state, action, nextState, reward, info):
-        # first store memory
+    def copy_nets(self):
+        '''
+        soft update target networks
+        '''
+        if self.learnStepCounter % self.policyUpdateFreq == 0:
+            # update target networks
+            for target_param, param in zip(self.actorNet_target.parameters(), self.actorNet.parameters()):
+                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
-        self.store_experience(state, action, nextState, reward, info)
-        if len(self.memory) < self.trainBatchSize:
-            return
-        transitions_raw = self.memory.sample(self.trainBatchSize)
-        transitions = Transition(*zip(*transitions_raw))
-        action = torch.tensor(transitions.action, device=self.device, dtype=torch.float32)  # shape(batch, numActions)
-        reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32)  # shape(batch)
+            for target_param, param in zip(self.criticNet_targetOne.parameters(), self.criticNetOne.parameters()):
+                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
-        # for some env, the output state requires further processing before feeding to neural network
-        if self.stateProcessor is not None:
-            state, _ = self.stateProcessor(transitions.state, self.device)
-            nonFinalNextState, nonFinalMask = self.stateProcessor(transitions.next_state, self.device)
-        else:
-            state = torch.tensor(transitions.state, device=self.device, dtype=torch.float32)
-            nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)), device=self.device,
-                                        dtype=torch.uint8)
-            nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None], device=self.device,
-                                             dtype=torch.float32)
+            for target_param, param in zip(self.criticNet_targetTwo.parameters(), self.criticNetTwo.parameters()):
+                target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
-        return state, nonFinalMask, nonFinalNextState, action, reward
-
-    def update_net(self, state, action, nextState, reward, info):
-
-        # state, nonFinalMask, nonFinalNextState, action, reward = self.prepare_minibatch(state, action, nextState, reward, info)
-        self.store_experience(state, action, nextState, reward, info)
-        if len(self.memory) < self.trainBatchSize:
-            return
-        transitions_raw = self.memory.sample(self.trainBatchSize)
-        transitions = Transition(*zip(*transitions_raw))
-        action = torch.tensor(transitions.action, device=self.device, dtype=torch.float32)  # shape(batch, numActions)
-        reward = torch.tensor(transitions.reward, device=self.device, dtype=torch.float32)  # shape(batch)
-
-        # for some env, the output state requires further processing before feeding to neural network
-        if self.stateProcessor is not None:
-            state, _ = self.stateProcessor(transitions.state, self.device)
-            nonFinalNextState, nonFinalMask = self.stateProcessor(transitions.next_state, self.device)
-        else:
-            state = torch.tensor(transitions.state, device=self.device, dtype=torch.float32)
-            nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, transitions.next_state)), device=self.device,
-                                        dtype=torch.uint8)
-            nonFinalNextState = torch.tensor([s for s in transitions.next_state if s is not None], device=self.device,
-                                             dtype=torch.float32)
-
-        batchSize = reward.shape[0]
+    def update_net_on_transitions(self, transitions_raw):
+        '''
+        This function performs gradient gradient on the network
+        '''
+        state, nonFinalMask, nonFinalNextState, action, reward = self.prepare_minibatch(transitions_raw)
 
         # Critic loss
         QValuesOne = self.criticNetOne.forward(state, action).squeeze()
@@ -112,7 +106,7 @@ class TDDDPGAgent(DDPGAgent):
 
         # next_actions = self.actorNet_target.forward(nonFinalNextState)
 
-        QNext = torch.zeros(batchSize, device=self.device, dtype=torch.float32)
+        QNext = torch.zeros(self.trainBatchSize, device=self.device, dtype=torch.float32)
         QNextCriticOne = self.criticNet_targetOne.forward(nonFinalNextState, next_actions.detach()).squeeze()
         QNextCriticTwo = self.criticNet_targetTwo.forward(nonFinalNextState, next_actions.detach()).squeeze()
 
@@ -154,17 +148,6 @@ class TDDDPGAgent(DDPGAgent):
                 self.losses.append([self.globalStepCount, self.epIdx, criticOne_loss.item(), criticTwo_loss.item(),
                                     policy_loss.item()])
 
-                # update target networks
-                for target_param, param in zip(self.actorNet_target.parameters(), self.actorNet.parameters()):
-                    target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
-
-                for target_param, param in zip(self.criticNet_targetOne.parameters(), self.criticNetOne.parameters()):
-                    target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
-
-                for target_param, param in zip(self.criticNet_targetTwo.parameters(), self.criticNetTwo.parameters()):
-                    target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
-
-        self.learnStepCounter += 1
 
     def save_all(self, identifier=None):
         if identifier is None:
