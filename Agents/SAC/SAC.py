@@ -7,6 +7,20 @@ import pickle
 
 
 class SACAgent(DDPGAgent):
+    """class for SAC agents.
+            This class contains implementation of SAC learning. It is derived from DDPG.
+            # Arguments
+                config: a dictionary for training parameters
+                actors: actor net and its target net
+                criticNets: Q and V net and its target net. Similar to TD3, will have two Q networks
+                env: environment for the agent to interact. env should implement same interface of a gym env
+                optimizers: network optimizers for both actor net and critic
+                netLossFunc: loss function of the network, e.g., mse
+                nbAction: number of actions
+                stateProcessor: a function to process output from env, processed state will be used as input to the networks
+                experienceProcessor: additional steps to process an experience
+            """
+
     def __init__(self, config, actorNets, criticNets, env, optimizers, netLossFunc, nbAction, stateProcessor=None,
                  experienceProcessor=None):
 
