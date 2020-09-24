@@ -121,7 +121,7 @@ private:
 	std::default_random_engine rand_generator;
 	std::normal_distribution<double> rand_normal{ 0.0, 1.0 };
 	std::uniform_real_distribution<double> rand_uniform{ 0.0, 1.0 };
-
+	std::vector<double> ambientFieldVelocity{ 0.0, 0.0, 0.0 };
 	int trajOutputInterval;
 	long long timeCounter, fileCounter;
 	std::ofstream trajOs;

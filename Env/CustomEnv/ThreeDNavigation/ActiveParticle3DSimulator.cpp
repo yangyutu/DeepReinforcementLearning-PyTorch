@@ -22,7 +22,7 @@ void ActiveParticle3DSimulator::readConfigFile() {
 
 	randomMoveFlag = config["randomMoveFlag"];
 
-	filetag = config["filetag"];
+	filetag = config["filetag"].get<std::string>();
 	//std::vector<double> iniConfig;
 	std::string typeString = config["particleType"];
 
@@ -50,16 +50,22 @@ void ActiveParticle3DSimulator::readConfigFile() {
         
 	radius = config["radius"];
 	maxSpeed = maxSpeed * radius / Tc;
-        if (config.contains("circularRadius")){
-            circularRadius = config["circularRadius"];
-            maxRotationSpeed = maxSpeed / circularRadius / radius;
-            relaxationTimeInverse = maxSpeed / circularRadius / radius;
-        }
+    if (config.contains("circularRadius")){
+        circularRadius = config["circularRadius"];
+        maxRotationSpeed = maxSpeed / circularRadius / radius;
+        relaxationTimeInverse = maxSpeed / circularRadius / radius;
+    }
+
+	if (config.contains("ambientFieldVelocity")) {
+		ambientFieldVelocity = config["ambientFieldVelocity"].get<std::vector<double>>();
+		for (auto &e: ambientFieldVelocity)
+			e = e * radius / Tc;
+	}
         
-        gravity = 0.0;
+    gravity = 0.0;
     if (config.contains("gravity")) {
 	    gravity = config["gravity"];
-	     gravity *= kb * T / radius;
+	    gravity *= kb * T / radius;
     }
 
 	dt_ = config["dt"]; // units of characteristc time
@@ -159,6 +165,7 @@ void ActiveParticle3DSimulator::run_given_director(int steps, const std::vector<
 
 		for (int i = 0; i < 3; i++) {
 			particle->r[i] += (mobility * particle->F[i] + particle->u * maxSpeed * particle->orientVec[i]) * dt_;
+			particle->r[i] += ambientFieldVelocity[i] * dt_;
 		}
 
 		double dot = particle->orientVec[0] * globalDirector[0] + particle->orientVec[1] * globalDirector[1] + particle->orientVec[2] * globalDirector[2];
@@ -231,6 +238,7 @@ void ActiveParticle3DSimulator::run(int steps, const std::vector<double>& action
 
 		for (int i = 0; i < 3; i++) {
 			particle->r[i] += (mobility * particle->F[i] + particle->u * maxSpeed * particle->orientVec[i]) * dt_;
+			particle->r[i] += ambientFieldVelocity[i] * dt_;
 		}
 
 		for (int i = 0; i < 3; i++) {
