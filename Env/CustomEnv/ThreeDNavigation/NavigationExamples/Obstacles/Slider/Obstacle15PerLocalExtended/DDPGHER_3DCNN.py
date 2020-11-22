@@ -1,14 +1,17 @@
 from Agents.DDPG.DDPG import DDPGAgent
+from Env.CustomEnv.StablizerOneD import StablizerOneDContinuous
 from utils.netInit import xavier_init
 import json
 from torch import optim
 from copy import deepcopy
+from Env.CustomEnv.StablizerOneD import StablizerOneD
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 from utils.OUNoise import OUNoise
+from activeParticleEnv import ActiveParticleEnvMultiMap, ActiveParticleEnv
 from Env.CustomEnv.ThreeDNavigation.activeParticle3DEnv import ActiveParticle3DEnv, RBCObstacle
 
 import math
@@ -126,7 +129,7 @@ class ActorConvNet(nn.Module):
 def stateProcessor(state, device = 'cpu'):
     # given a list a dictions like { 'sensor': np.array, 'target': np.array}
     # we want to get a diction like {'sensor': list of torch tensor, 'target': list of torch tensor}
-    nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, state)), device=device, dtype=torch.bool)
+    nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, state)), device=device, dtype=torch.uint8)
 
     senorList = [item['sensor'] for item in state if item is not None]
     targetList = [item['target'] for item in state if item is not None]
@@ -148,8 +151,8 @@ configName = 'config.json'
 with open(configName,'r') as f:
     config = json.load(f)
 
-def obstacleConstructorCallBack(configName = 'config_RBC.json'):
-
+def obstacleConstructorCallBack():
+    configName = 'config_RBC.json'
     with open(configName, 'r') as f:
         config = json.load(f)
 
@@ -204,11 +207,6 @@ if config['loadExistingModel']:
     agent.actorNet_target.load_state_dict(checkpoint['actorNet_state_dict'])
     agent.criticNet.load_state_dict(checkpoint['criticNet_state_dict'])
     agent.criticNet_target.load_state_dict(checkpoint['criticNet_state_dict'])
-
-
-if config['loadCheckpointFlag']:
-    agent.load_checkpoint(config['loadCheckpointPrefix'])
-
 
 plotPolicyFlag = False
 N = 100

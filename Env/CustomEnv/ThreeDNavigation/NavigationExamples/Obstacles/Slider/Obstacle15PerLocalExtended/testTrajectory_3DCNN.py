@@ -1,14 +1,17 @@
 from Agents.DDPG.DDPG import DDPGAgent
+from Env.CustomEnv.StablizerOneD import StablizerOneDContinuous
 from utils.netInit import xavier_init
 import json
 from torch import optim
 from copy import deepcopy
+from Env.CustomEnv.StablizerOneD import StablizerOneD
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 from utils.OUNoise import OUNoise
+from activeParticleEnv import ActiveParticleEnvMultiMap, ActiveParticleEnv
 from Env.CustomEnv.ThreeDNavigation.activeParticle3DEnv import ActiveParticle3DEnv, RBCObstacle
 
 import math
@@ -126,7 +129,7 @@ class ActorConvNet(nn.Module):
 def stateProcessor(state, device = 'cpu'):
     # given a list a dictions like { 'sensor': np.array, 'target': np.array}
     # we want to get a diction like {'sensor': list of torch tensor, 'target': list of torch tensor}
-    nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, state)), device=device, dtype=torch.bool)
+    nonFinalMask = torch.tensor(tuple(map(lambda s: s is not None, state)), device=device, dtype=torch.uint8)
 
     senorList = [item['sensor'] for item in state if item is not None]
     targetList = [item['target'] for item in state if item is not None]
@@ -148,8 +151,8 @@ configName = 'config.json'
 with open(configName,'r') as f:
     config = json.load(f)
 
-def obstacleConstructorCallBack(configName = 'config_RBC.json'):
-
+def obstacleConstructorCallBack():
+    configName = 'config_RBC.json'
     with open(configName, 'r') as f:
         config = json.load(f)
 
@@ -198,76 +201,56 @@ criticNets = {'critic': criticNet, 'target': criticTargetNet}
 optimizers = {'actor': actorOptimizer, 'critic':criticOptimizer}
 agent = DDPGAgent(config, actorNets, criticNets, env, optimizers, torch.nn.MSELoss(reduction='mean'), N_A, stateProcessor=stateProcessor, experienceProcessor=experienceProcessor)
 
-if config['loadExistingModel']:
-    checkpoint = torch.load(config['loadExistingModelCheckPoint'])
-    agent.actorNet.load_state_dict(checkpoint['actorNet_state_dict'])
-    agent.actorNet_target.load_state_dict(checkpoint['actorNet_state_dict'])
-    agent.criticNet.load_state_dict(checkpoint['criticNet_state_dict'])
-    agent.criticNet_target.load_state_dict(checkpoint['criticNet_state_dict'])
+checkpoint = torch.load('Log/Epoch17500_checkpoint.pt')
+agent.actorNet.load_state_dict(checkpoint['actorNet_state_dict'])
+
+config['randomMoveFlag'] = True
+config['dynamicInitialStateFlag'] = False
+config['dynamicTargetFlag'] = False
+config['currentState'] = [0, 0, 1, 1, 0, 0]
+config['currentState'] = [10, 0, 1, 1, 0, 0]
+config['targetState'] = [15, 15, 25]
+config['filetag'] = 'Traj/test'
+config['trajOutputFlag'] = True
+config['trajOutputInterval'] = 10
+config['finishThresh'] = 2
+config['gravity'] = 0
+with open('config_test.json', 'w') as f:
+    json.dump(config, f)
+
+agent.env = ActiveParticle3DEnv('config_test.json',1, obstacleConstructorCallBack)
 
 
-if config['loadCheckpointFlag']:
-    agent.load_checkpoint(config['loadCheckpointPrefix'])
+targets = [[-20, -20, 99], [25, 30, 99]]
+nTargets = len(targets)
+nTraj = 1
+endStep = 400
 
+for j in range(nTargets):
+    recorder = []
 
-plotPolicyFlag = False
-N = 100
-if plotPolicyFlag:
-    for phiIdx in range(8):
-        phi = phiIdx * np.pi / 4.0
-        policy = deepcopy(agent.env.mapMat).astype(np.float)
-        value = deepcopy(agent.env.mapMat)
-        for i in range(policy.shape[0]):
-            for j in range(policy.shape[1]):
-                if env.mapMat[i, j] > 0:
-                    policy[i, j] = -2
-                    value[i, j] = -1
+    for i in range(nTraj):
+        print(i)
+        agent.env.config['targetState'] = targets[j]
+        state = agent.env.reset()
 
-                else:
-                    sensorInfo = agent.env.getSensorInfoFromPos(np.array([i, j, phi]))
-                    distance = np.array(config['targetState']) - np.array([i, j])
-                    dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
-                    dy = -distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
-                    angle = math.atan2(dy, dx)
-                    if math.sqrt(dx ** 2 + dy ** 2) > agent.env.targetClipLength:
-                        dx = agent.env.targetClipLength * math.cos(angle)
-                        dy = agent.env.targetClipLength * math.sin(angle)
-                    state = {'sensor': sensorInfo, 'target': np.array([dx, dy]) / agent.env.distanceScale}
-                    stateTorch, _ = agent.stateProcessor([state], device = config['device'])
-                    action = agent.actorNet.select_action(stateTorch, noiseFlag=False)
-                    value[i, j] = agent.criticNet.forward(stateTorch, action).item()
-                    action = action.cpu().detach().numpy()
-                    policy[i, j] = action
-        np.savetxt(config['mapName'] + 'PolicyAnalysisBefore' + 'phiIdx' + str(phiIdx) + '.txt', policy, fmt='%.3f', delimiter='\t')
-        np.savetxt(config['mapName'] + 'ValueAnalysisBefore' + 'phiIdx' + str(phiIdx) + '.txt', value, fmt='%.3f', delimiter='\t')
+        done = False
+        rewardSum = 0
+        stepCount = 0
+        info = [i, stepCount] + agent.env.currentState.tolist() + agent.env.targetState.tolist() + [0.0 for _ in range(N_A)]
+        recorder.append(info)
+        for stepCount in range(endStep):
+            action = agent.select_action(agent.actorNet, state, noiseFlag=False)
+            nextState, reward, done, infoDict = agent.env.step(action)
+            info = [i, stepCount] + agent.env.currentState.tolist() + agent.env.targetState.tolist() + action.tolist()
+            recorder.append(info)
+            state = nextState
+            rewardSum += reward
+            if done:
+                print("done in step count: {}".format(stepCount))
 
-agent.train()
-
-if plotPolicyFlag:
-    for phiIdx in range(8):
-        phi = phiIdx * np.pi / 4.0
-        policy = deepcopy(agent.env.mapMat).astype(np.float)
-        value = deepcopy(agent.env.mapMat)
-        for i in range(policy.shape[0]):
-            for j in range(policy.shape[1]):
-                if env.mapMat[i, j] > 0:
-                    policy[i, j] = -2
-                    value[i, j] = -1
-
-                else:
-                    sensorInfo = agent.env.getSensorInfoFromPos(np.array([i, j, phi]))
-                    distance = np.array(config['targetState']) - np.array([i, j])
-                    dx = distance[0] * math.cos(phi) + distance[1] * math.sin(phi)
-                    dy = -distance[0] * math.sin(phi) + distance[1] * math.cos(phi)
-                    angle = math.atan2(dy, dx)
-                    if math.sqrt(dx ** 2 + dy ** 2) > agent.env.targetClipLength:
-                        dx = agent.env.targetClipLength * math.cos(angle)
-                        dy = agent.env.targetClipLength * math.sin(angle)
-                    state = {'sensor': sensorInfo, 'target': np.array([dx, dy]) / agent.env.distanceScale}
-                    stateTorch, _ = agent.stateProcessor([state], device = config['device'])
-                    action = agent.actorNet.select_action(stateTorch, noiseFlag=False)
-                    value[i, j] = agent.criticNet.forward(stateTorch, action).item()
-                    action = action.cpu().detach().numpy()
-                    policy[i, j] = action
-        np.savetxt(config['mapName'] + 'PolicyAnalysisAfter' + 'phiIdx' + str(phiIdx) + '.txt', policy, fmt='%.3f', delimiter='\t')
-        np.savetxt(config['mapName'] + 'ValueAnalysisAfter' + 'phiIdx' + str(phiIdx) + '.txt', value, fmt='%.3f', delimiter='\t')
+                #break
+        print("reward sum = " + str(rewardSum))
+        print(infoDict)
+    recorderNumpy = np.array(recorder)
+    np.savetxt('Traj/testTraj_target_'+str(j)+'.txt', recorder, fmt='%.3f')

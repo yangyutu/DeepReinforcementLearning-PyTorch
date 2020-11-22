@@ -32,3 +32,18 @@ for i in range(step):
     #else:
     #    env.step(100, np.array([u, v, 0]))
         
+
+env = ActiveParticle3DEnv('config_ambientField.json',1)
+
+step = 200
+
+state = env.reset()
+NA = env.nbActions
+print(state)
+
+for i in range(step):
+    state = env.currentState
+    action = [0.0, 0.0]
+    nextState, reward, action, info = env.step(action)
+    print(nextState)
+    print(info)

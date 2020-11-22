@@ -21,26 +21,14 @@
     "wallFlag": true,
     "episodeLength": 100,
     "BDModelcustomIniConfig":true,
-    "receptHalfWidth": 7,
+    "receptHalfWidth": 5,
     "obstacleMapPaddingWidth": 30,
     "wallRadius": 50,
 	"wallHeight": 100,
-    "obstaclePenalty": 0.02,
     "sensorPixelSize": 2,
-    "multiMapFlag": true,
-    "multiMapNames":
-    [
-        "config_RBC_R50_F.json",
-        "config_RBC_R50_5Per.json",
-        "config_RBC_R50_10Per.json",
-        "config_RBC_R50_15Per.json",
-        "config_RBC_R25_10Per.json",
-        "config_RBC_R12_10PerTest.json"
-    ],
-    "multiMapProbs": [0.05, 0.05, 0.10, 0.30, 0.25, 0.25],
 	"distance_thresh_decay": 100,
     "epsilon_decay": 20000,
-    "trainStep": 40000,
+    "trainStep": 20000,
     "memoryCapacity": 50000,
     "trainBatchSize": 64,
     "gamma": 0.99,
@@ -83,9 +71,7 @@
     "verbose": false,
     "targetMoveFreq": 2,
     "stochAgent": true,
-    "loadExistingModel": false,
+    "loadExistingModel": true,
     "saveModelFile": "Finalepoch20000_checkpoint.pt",
-        "loadExistingModelCheckPoint": "Epoch10000_checkpoint.pt",
-    "loadCheckpointFlag": false,
-    "loadCheckpointPrefix": "Log/Finalepoch40000"
+        "loadExistingModelCheckPoint": "Epoch2500_checkpoint.pt"
 }

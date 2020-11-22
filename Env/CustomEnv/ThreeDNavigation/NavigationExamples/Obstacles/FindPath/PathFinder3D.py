@@ -3,6 +3,7 @@ from sklearn.neighbors import kneighbors_graph
 from scipy.sparse.csgraph import dijkstra
 import networkx as nx
 from sklearn.metrics.pairwise import euclidean_distances
+import collections
 import math
 import json
 from Env.CustomEnv.ThreeDNavigation.activeParticle3DEnv import ActiveParticle3DEnv, RBCObstacle
@@ -14,7 +15,7 @@ class PathFinderThreeD:
         self.config_RBC = config_RBC
         self.resolution = res
         self.height, self.radius = self.config_RBC['heightRadius']
-
+        self.nextMoveCache = {}
         self._generateRBC()
 
         self._generateGridPoints()
@@ -88,3 +89,29 @@ class PathFinderThreeD:
         queryLength = [allLength[i] for i in self.startConfigIdx]
 
         return queryLength
+
+    def fillCache(self, endPoint):
+        dist = euclidean_distances([endPoint], self.gridPoints)
+        self.targetConfigIdx = np.argmin(dist)
+
+        allPaths = nx.single_source_shortest_path(self.NX_G, self.targetConfigIdx)
+
+        self.nextMove = {}
+        for k, v in allPaths.items():
+            if len(v) > 1:
+                self.nextMove[k] = v[-2]
+            else:
+                self.nextMove[k] = v[-1]
+
+    def getNextMove(self, startPoint):
+        startPoint = startPoint.astype(np.int)
+        startPointTuple = tuple(startPoint.tolist())
+        if startPointTuple in self.nextMoveCache:
+            startConfigIdx = self.nextMoveCache[startPointTuple]
+            nextMoveIdx = self.nextMove[startConfigIdx]
+        else:
+            dist = euclidean_distances([startPoint], self.gridPoints)
+            startConfigIdx = np.argmin(dist, axis=1)[0]
+            self.nextMoveCache[startPointTuple] = startConfigIdx
+            nextMoveIdx = self.nextMove[startConfigIdx]
+        return self.gridPoints[nextMoveIdx]
