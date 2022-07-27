@@ -201,7 +201,7 @@ optimizers = {'actor': actorOptimizer, 'critic':criticOptimizer}
 agent = DDPGAgent(config, actorNets, criticNets, env, optimizers, torch.nn.MSELoss(reduction='mean'), N_A, stateProcessor=stateProcessor, experienceProcessor=experienceProcessor)
 
 checkpoint = torch.load('../../Log/Epoch15000_checkpoint.pt')
-
+#checkpoint = torch.load('../../../AWSTrain/finalTrain1/Epoch45000_checkpoint.pt')
 agent.actorNet.load_state_dict(checkpoint['actorNet_state_dict'])
 
 config['randomMoveFlag'] = True
@@ -226,7 +226,7 @@ agent.env = ActiveParticle3DEnv('config_test.json',1, obstacleConstructorCallBac
 
 finalTarget = [0, 0, 499]
 
-nTraj = 20
+nTraj = 30
 endStep = 500
 
 recorder = []
@@ -255,6 +255,7 @@ for i in range(nTraj):
         pos = agent.env.currentState[:3]
         guide.step(pos, 30)
         target = guide.getTrajPos()
+
         agent.env.targetState = target
 
         state = nextState
@@ -265,7 +266,7 @@ for i in range(nTraj):
         if done:
             print("done in step count: {}".format(stepCount))
 
-            break
+            #break
     print("reward sum = " + str(rewardSum))
     print(infoDict)
 recorderNumpy = np.array(recorder)

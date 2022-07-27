@@ -1,17 +1,14 @@
 from Agents.DDPG.DDPG import DDPGAgent
-from Env.CustomEnv.StablizerOneD import StablizerOneDContinuous
 from utils.netInit import xavier_init
 import json
 from torch import optim
 from copy import deepcopy
-from Env.CustomEnv.StablizerOneD import StablizerOneD
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 from utils.OUNoise import OUNoise
-from activeParticleEnv import ActiveParticleEnvMultiMap, ActiveParticleEnv
 from Env.CustomEnv.ThreeDNavigation.activeParticle3DEnv import ActiveParticle3DEnv, RBCObstacle
 from Env.CustomEnv.ThreeDNavigation.NavigationExamples.optimalSearch.pathGuider import PathGuiderCurvedVessel
 from Env.CustomEnv.ThreeDNavigation.NavigationExamples.Obstacles.CurveVessels.curvedVessel import CurvedVessel
@@ -205,6 +202,7 @@ optimizers = {'actor': actorOptimizer, 'critic':criticOptimizer}
 agent = DDPGAgent(config, actorNets, criticNets, env, optimizers, torch.nn.MSELoss(reduction='mean'), N_A, stateProcessor=stateProcessor, experienceProcessor=experienceProcessor)
 
 checkpoint = torch.load('../../Log/Epoch15000_checkpoint.pt')
+#checkpoint = torch.load('../../../AWSTrain/finalTrain1/Epoch45000_checkpoint.pt')
 
 agent.actorNet.load_state_dict(checkpoint['actorNet_state_dict'])
 
@@ -232,7 +230,7 @@ agent.env = ActiveParticle3DEnv('config_test.json',1, obstacleConstructorCallBac
 
 finalTarget = [0, 0, 499]
 
-nTraj = 5
+nTraj = 20
 endStep = 800
 
 recorder = []
@@ -258,7 +256,7 @@ for i in range(nTraj):
         recorder.append(info)
 
         pos = agent.env.currentState[:3]
-        guide.step(pos, 13)
+        guide.step(pos, 20)
         target = guide.getTrajPos()
         agent.env.targetState = target
 

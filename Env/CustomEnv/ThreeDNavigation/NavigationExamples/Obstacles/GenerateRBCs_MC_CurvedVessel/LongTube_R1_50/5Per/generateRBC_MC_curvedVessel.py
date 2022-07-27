@@ -7,8 +7,8 @@ from Env.CustomEnv.ThreeDNavigation.NavigationExamples.Obstacles.CurveVessels.cu
 import json
 height = 500
 radius = 50
-thresh = 0.5
-numObs = 50
+thresh = 1.5
+numObs = 40
 R1 = 5
 obsCount = 0
 np.random.seed(2)
@@ -40,20 +40,23 @@ class Ellipsoid:
         phi = np.linspace(0, 2 * np.pi, 40)
         Theta, Phi = np.meshgrid(theta, phi)
 
-        self.keyPoints = np.array([(a * np.sin(Theta) * np.cos(Phi)).flatten(),
-                                   (b * np.sin(Theta) * np.sin(Phi)).flatten(),
-                                   (c * np.cos(Theta)).flatten()]).T
+        self.keyPoints = np.array([(a * np.cos(Theta)).flatten(),
+                                   (b * np.sin(Theta) * np.cos(Phi)).flatten(),
+                                   (c * np.sin(Theta) * np.sin(Phi)).flatten()]).T
+
+        # Here orient is the short axis direction
         phi = math.atan2(self.orient[1], self.orient[0])
+        # orient 2 is perpendicular to orient 1
         orientVec2 = np.array([-math.sin(phi), math.cos(phi), 0])
         orientVec3 = np.cross(self.orient, orientVec2)
         localFrame = np.array([self.orient, orientVec2, orientVec3])
-        keyPoints_rot = np.transpose(np.dot(localFrame, self.keyPoints.T))
+        keyPoints_rot = np.transpose(np.dot(localFrame.T, self.keyPoints.T))
 
         self.keyPoints = keyPoints_rot + self.center
 
     def move(self):
-        self.posMove = np.random.randn(3)
-        self.orientMove = np.random.randn(3) * 0.5
+        self.posMove = np.random.randn(3) * 0.5
+        self.orientMove = np.random.randn(3) * 0.25
 
         self.center_old = self.center.copy()
         self.orient_old = self.orient.copy()
@@ -142,28 +145,32 @@ class MonteCarloSimulation:
             print(self.ellipsoids[i].center, self.ellipsoids[i].orient)
 
 
+def output(filename='config_RBC.json'):
+    output = {'numObstacles': MC.numObjects}
+    output['heightRadius'] = [height, R1]
+    output['fractions'] = [vol, np.pi * radius ** 2 * height]
+    for i in range(MC.numObjects):
+        e = MC.ellipsoids[i]
+        output['obs' + str(i)] = {'center': e.center.tolist(), 'orient': e.orient.tolist(), 'scale': e.scale}
+
+    with open(filename, 'w') as f:
+        json.dump(output, f)
+
 MC = MonteCarloSimulation()
 MC.generateInitialConfig()
 vol = 0
 for i in range(MC.numObjects):
     vol += MC.ellipsoids[i].volume
+# estimate from matlab
 totalVol = 1.0271e6
 print(vol)
 print(totalVol)
 print(vol/(totalVol))
 
-MC.simulate(500)
-MC.output()
+output('intConfig.json')
+for _ in range(20):
+    MC.simulate(100)
+    MC.output()
+    output("Config_RBC" + str(_) + ".json")
 
 
-
-output = {'numObstacles':MC.numObjects}
-output['heightRadius'] = [height, R1]
-output['fractions'] = [vol, np.pi * radius**2 * height]
-
-for i in range(MC.numObjects):
-    e = MC.ellipsoids[i]
-    output['obs' + str(i)] = {'center': e.center.tolist(), 'orient': e.orient.tolist(), 'scale': e.scale}
-
-with open('config_RBC.json', 'w') as f:
-    json.dump(output, f)

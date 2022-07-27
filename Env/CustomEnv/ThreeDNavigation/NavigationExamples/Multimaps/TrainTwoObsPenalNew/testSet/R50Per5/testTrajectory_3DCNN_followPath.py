@@ -200,7 +200,7 @@ criticNets = {'critic': criticNet, 'target': criticTargetNet}
 optimizers = {'actor': actorOptimizer, 'critic':criticOptimizer}
 agent = DDPGAgent(config, actorNets, criticNets, env, optimizers, torch.nn.MSELoss(reduction='mean'), N_A, stateProcessor=stateProcessor, experienceProcessor=experienceProcessor)
 
-checkpoint = torch.load('../../Log/Epoch52500_checkpoint.pt')
+checkpoint = torch.load('../../Log/Epoch15000_checkpoint.pt')
 
 agent.actorNet.load_state_dict(checkpoint['actorNet_state_dict'])
 
@@ -260,7 +260,7 @@ for i in range(nTraj):
         state = nextState
         rewardSum += reward
 
-        done = (abs(finalTarget[2] - pos[2]) < 3.0)
+        done = (abs(finalTarget[2] - pos[2]) < 5.0)
 
         if done:
             print("done in step count: {}".format(stepCount))

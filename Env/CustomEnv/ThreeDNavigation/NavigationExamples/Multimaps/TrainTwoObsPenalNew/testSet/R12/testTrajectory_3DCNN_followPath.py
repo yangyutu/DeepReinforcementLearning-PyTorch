@@ -159,7 +159,7 @@ def obstacleConstructorCallBack(configName = 'config_RBC.json'):
 
     for i in range(config['numObstacles']):
         name = 'obs' + str(i)
-        obstacles.append(RBCObstacle(np.array(config[name]['center']), config[name]['scale'], np.array(config[name]['orient'])))
+        obstacles.append(RBCObstacle(np.array(config[name]['center']), config[name]['scale']*0.9, np.array(config[name]['orient'])))
 
         obstacleCenter.append(obstacles[i].center)
 
@@ -201,7 +201,9 @@ optimizers = {'actor': actorOptimizer, 'critic':criticOptimizer}
 agent = DDPGAgent(config, actorNets, criticNets, env, optimizers, torch.nn.MSELoss(reduction='mean'), N_A, stateProcessor=stateProcessor, experienceProcessor=experienceProcessor)
 
 checkpoint = torch.load('../../Log/Epoch15000_checkpoint.pt')
+#checkpoint = torch.load('../../Log/Epoch52500_checkpoint.pt')
 
+#checkpoint = torch.load('../../../AWSTrain/finalTrain1/Epoch45000_checkpoint.pt')
 agent.actorNet.load_state_dict(checkpoint['actorNet_state_dict'])
 
 config['randomMoveFlag'] = True
@@ -215,7 +217,7 @@ config['trajOutputFlag'] = True
 config['trajOutputInterval'] = 100
 config['finishThresh'] = 2
 config['gravity'] = 0
-config['multiMapNames'] = ['config_RBC.json']
+config['multiMapNames'] = ['config_RBC_R12_10PerTest.json']
 config['multiMapProbs'] = [1.0]
 
 with open('config_test.json', 'w') as f:
@@ -253,7 +255,7 @@ for i in range(nTraj):
         recorder.append(info)
 
         pos = agent.env.currentState[:3]
-        guide.step(pos, 30)
+        guide.step(pos, 20)
         target = guide.getTrajPos()
         agent.env.targetState = target
 
