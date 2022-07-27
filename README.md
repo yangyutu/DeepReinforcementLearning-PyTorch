@@ -31,7 +31,7 @@ PyTorch implementation of classical deep reinforcement learning algorithms
 ## Application examples:
 
 * Efficient Navigation of Active Particles in an Unseen Environment via Deep Reinforcement Learning [[Publication]](https://arxiv.org/abs/1906.10844)
-* Hierarchical planning with deep reinforcement learning for three-dimensional navigation of microrobots in blood vessels (under review)
+* :new: :fire: Hierarchical planning with deep reinforcement learning for three-dimensional navigation of microrobots in blood vessels (under review)
 
 ## Custom envs
 
@@ -40,7 +40,7 @@ PyTorch implementation of classical deep reinforcement learning algorithms
 * maze with dynamic obstacles and stchastic/deterministic agent
 * finanical portfolio engineering env (for hedging and investment)
 * colloidal assembly env
-* 3D blood vessel navigation environment
+* :new: :fire: [[3D blood vessel navigation environment]](https://github.com/yangyutu/DeepReinforcementLearning-PyTorch/tree/master/Env/CustomEnv/ThreeDNavigation)
 
 
 ## Third party envs
