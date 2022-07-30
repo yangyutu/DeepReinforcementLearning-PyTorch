@@ -34,11 +34,9 @@
         "config_RBC_R50_5Per.json",
         "config_RBC_R50_10Per.json",
         "config_RBC_R25_10Per.json",
-        "config_RBC_R12_10PerTest.json",
-        "config_RBC_R50_10Per2.json",
-        "config_RBC_R50_5Per2.json"
+        "config_RBC_R12_10Per.json"
     ],
-    "multiMapProbs": [0.15, 0.15, 0.1, 0.1, 0.2, 0.15, 0.15],
+    "multiMapProbs": [0.10, 0.15, 0.15, 0.2, 0.2, 0.2],
 	"distance_thresh_decay": 100,
     "epsilon_decay": 20000,
     "trainStep": 40000,
