@@ -1,4 +1,4 @@
-###
+### Introduction
 
 This folder contains training and evaluation scripts we used to generate results in the paper "Hierarchical planning with deep reinforcement learning for  three-dimensional navigation of microrobots in blood vessels".
 A comprehensive description on the training procedure is described in the supplementrary information coming with the paper. 
